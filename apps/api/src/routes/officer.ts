@@ -44,10 +44,17 @@ officerRouter.get(
           .filter((s) => valid.has(s)) as ApplicationStatus[])
       : undefined;
 
+    // Applications blocked on the citizen are excluded unless explicitly asked
+    // for: an officer cannot act on a file that is missing evidence only the
+    // applicant can supply.
+    const OFFICER_VISIBLE = Object.values(ApplicationStatus).filter(
+      (s) => s !== ApplicationStatus.AWAITING_CITIZEN_ACTION,
+    ) as ApplicationStatus[];
+
     return ok(
       res,
       await listApplications({
-        statuses: statuses?.length ? statuses : undefined,
+        statuses: statuses?.length ? statuses : OFFICER_VISIBLE,
         search: query.search,
         page: query.page,
         pageSize: query.pageSize,

@@ -156,9 +156,11 @@ describe.skipIf(!available)('scholarship workflow, end to end', () => {
     }
 
     const { prisma } = await import('@govflow/core');
+    // All four departments run, then the workflow stops at the document gate -
+    // the scholarship requires certificates that have not been uploaded yet.
     await waitFor(
-      () => prisma.workflowInstance.findUniqueOrThrow({ where: { applicationId } }),
-      (w) => w.status === 'WAITING_FOR_OFFICER',
+      () => prisma.application.findUniqueOrThrow({ where: { id: applicationId } }),
+      (a) => a.status === 'AWAITING_CITIZEN_ACTION',
       25_000,
     );
 
@@ -169,6 +171,16 @@ describe.skipIf(!available)('scholarship workflow, end to end', () => {
       'INCOME',
       'LEGACY_BENEFICIARY',
     ]);
+  });
+
+  it('does not hand an incomplete application to an officer', async () => {
+    const { prisma } = await import('@govflow/core');
+    const application = await prisma.application.findUniqueOrThrow({
+      where: { id: applicationId },
+    });
+    expect(application.currentStep).toBe('DOCUMENT_VALIDATION');
+    expect(application.status).not.toBe('REQUIRES_REVIEW');
+    expect(application.status).not.toBe('UNDER_REVIEW');
   });
 
   it('normalises four different department schemas into the common data model', async () => {
@@ -204,26 +216,7 @@ describe.skipIf(!available)('scholarship workflow, end to end', () => {
     expect(consentGranted).toBeGreaterThanOrEqual(3);
   });
 
-  it('detects the education-registry name abbreviation as an advisory finding', async () => {
-    const { prisma } = await import('@govflow/core');
-    const application = await prisma.application.findUniqueOrThrow({
-      where: { id: applicationId },
-    });
-    const report = application.validationSummary as {
-      engine: string;
-      advisoryOnly: boolean;
-      findings: { kind: string; severity: string }[];
-    };
-
-    expect(report.advisoryOnly).toBe(true);
-    // No Gemini key in CI, so the deterministic engine must have carried it.
-    expect(report.engine).toBe('RULE_BASED');
-    expect(report.findings.some((f) => f.kind === 'NAME_MISMATCH')).toBe(true);
-    // Both certificates are still missing at this point.
-    expect(report.findings.filter((f) => f.kind === 'MISSING_DOCUMENT')).toHaveLength(2);
-  });
-
-  it('extracts fields from an uploaded certificate and re-validates', async () => {
+  it('extracts fields from an uploaded certificate and releases the gate', async () => {
     const upload = await request(app)
       .post(`/api/applications/${applicationId}/documents`)
       .set('authorization', `Bearer ${citizenToken}`)
@@ -234,7 +227,6 @@ describe.skipIf(!available)('scholarship workflow, end to end', () => {
     expect(upload.body.data.extraction.fields.name).toBe('Rohan Prajapati');
     expect(upload.body.data.extraction.fields.annualIncome).toBe(180000);
     expect(upload.body.data.extraction.ocrEngine).toBe('TEXT_LAYER');
-    expect(upload.body.data.revalidationQueued).toBe(true);
 
     await request(app)
       .post(`/api/applications/${applicationId}/documents`)
@@ -243,25 +235,28 @@ describe.skipIf(!available)('scholarship workflow, end to end', () => {
       .attach('file', EDUCATION_CERT, { contentType: 'text/plain' })
       .expect(201);
 
-    const { prisma } = await import('@govflow/core');
+    const { prisma, resumeWorkflow } = await import('@govflow/core');
+    // Both required certificates are now present, so the gate releases.
+    await resumeWorkflow(applicationId);
+
     const application = await waitFor(
       () => prisma.application.findUniqueOrThrow({ where: { id: applicationId } }),
-      (a) => {
-        const report = a.validationSummary as { findings: { kind: string }[] } | null;
-        return Boolean(
-          report && report.findings.every((f) => f.kind !== 'MISSING_DOCUMENT'),
-        );
-      },
+      (a) => a.validationSummary !== null && a.status !== 'AWAITING_CITIZEN_ACTION',
       25_000,
     );
 
     const report = application.validationSummary as {
       status: string;
+      engine: string;
+      advisoryOnly: boolean;
       findings: { kind: string }[];
     };
-    // The missing-document findings are gone; the genuine name mismatch remains.
+    expect(report.advisoryOnly).toBe(true);
+    // No Gemini key in CI, so the deterministic engine must have carried it.
+    expect(report.engine).toBe('RULE_BASED');
+    // No missing-document findings remain; the genuine name mismatch does.
+    expect(report.findings.some((f) => f.kind === 'MISSING_DOCUMENT')).toBe(false);
     expect(report.findings.some((f) => f.kind === 'NAME_MISMATCH')).toBe(true);
-    expect(report.status).toBe('WARNING');
   });
 
   it('rejects an unsupported file type', async () => {

@@ -13,6 +13,7 @@ export type ApplicationStatus =
   | 'DRAFT'
   | 'SUBMITTED'
   | 'PROCESSING'
+  | 'AWAITING_CITIZEN_ACTION'
   | 'REQUIRES_REVIEW'
   | 'UNDER_REVIEW'
   | 'APPROVED'
@@ -301,6 +302,7 @@ export interface PlatformMetrics {
 
 export interface OfficerMetrics {
   total: number;
+  awaitingCitizen: number;
   awaitingReview: number;
   requiresReview: number;
   underReview: number;

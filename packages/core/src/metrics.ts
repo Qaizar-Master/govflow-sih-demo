@@ -156,15 +156,25 @@ export async function platformMetrics() {
 
 /** Officer-scoped summary for the officer dashboard header. */
 export async function officerMetrics() {
-  const [total, requiresReview, underReview, approved, rejected, openExceptions] =
-    await Promise.all([
-      prisma.application.count(),
-      prisma.application.count({ where: { status: ApplicationStatus.REQUIRES_REVIEW as never } }),
-      prisma.application.count({ where: { status: ApplicationStatus.UNDER_REVIEW as never } }),
-      prisma.application.count({ where: { status: ApplicationStatus.APPROVED as never } }),
-      prisma.application.count({ where: { status: ApplicationStatus.REJECTED as never } }),
-      prisma.exception.count({ where: { status: 'OPEN' } }),
-    ]);
+  const [
+    total,
+    requiresReview,
+    underReview,
+    approved,
+    rejected,
+    openExceptions,
+    awaitingCitizen,
+  ] = await Promise.all([
+    prisma.application.count(),
+    prisma.application.count({ where: { status: ApplicationStatus.REQUIRES_REVIEW as never } }),
+    prisma.application.count({ where: { status: ApplicationStatus.UNDER_REVIEW as never } }),
+    prisma.application.count({ where: { status: ApplicationStatus.APPROVED as never } }),
+    prisma.application.count({ where: { status: ApplicationStatus.REJECTED as never } }),
+    prisma.exception.count({ where: { status: 'OPEN' } }),
+    prisma.application.count({
+      where: { status: ApplicationStatus.AWAITING_CITIZEN_ACTION as never },
+    }),
+  ]);
 
   const live = await prisma.application.findMany({
     where: { decisionAt: null },
@@ -197,6 +207,8 @@ export async function officerMetrics() {
 
   return {
     total,
+    /** Blocked on the citizen - deliberately excluded from the officer work-list. */
+    awaitingCitizen,
     awaitingReview: requiresReview + underReview,
     requiresReview,
     underReview,

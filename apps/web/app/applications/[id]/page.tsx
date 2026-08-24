@@ -153,6 +153,18 @@ export default function CitizenApplicationDetail() {
           {actionError}
         </Alert>
       ) : null}
+      {application.status === 'AWAITING_CITIZEN_ACTION' ? (
+        <Alert variant="warning" className="mb-4" title="We need something from you">
+          {/* The blocking step carries the specific reason, so tell them exactly
+              what to do rather than a generic "action required". */}
+          {data.timeline.find((t) => t.status === 'PENDING' && t.errorMessage)?.errorMessage ??
+            'Your application is paused until you supply the outstanding information.'}
+          <br />
+          <span className="text-xs">
+            Verification resumes automatically as soon as you do — no need to resubmit.
+          </span>
+        </Alert>
+      ) : null}
       {application.status === 'APPROVED' ? (
         <Alert variant="success" className="mb-4" title="Approved">
           Decided {formatDateTime(application.decisionAt)} by{' '}

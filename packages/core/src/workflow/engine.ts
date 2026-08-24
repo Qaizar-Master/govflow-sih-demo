@@ -4,6 +4,7 @@ import {
   ConsentStatus,
   ExceptionStatus,
   ExceptionType,
+  FINDING_KIND,
   JOB_NAMES,
   NotificationType,
   Role,
@@ -26,7 +27,7 @@ import { raiseException } from '../exceptions.js';
 import { notifyApplicant, notifyRole } from '../notifications.js';
 import { getConnector } from '../connector-registry.js';
 import { produceValidationReport } from '../validation/index.js';
-import { documentProcessor } from '../documents/index.js';
+import { classifyDocument, documentProcessor } from '../documents/index.js';
 import { enqueueStep } from '../queue.js';
 import { createLogger } from '../logger.js';
 import { assembleFacts, unavailableSources } from './facts.js';
@@ -239,15 +240,13 @@ export async function runStep(input: RunStepInput): Promise<StepOutcome> {
     });
 
     if (handled.kind === 'WAITING_FOR_CITIZEN') {
-      await prisma.workflowStep.update({
-        where: { id: step.id },
-        data: { status: StepStatus.PENDING as never, errorMessage: handled.reason },
+      await parkForCitizen({
+        applicationId,
+        workflowInstanceId: application.workflow.id,
+        stepId: step.id,
+        stepType,
+        reason: handled.reason,
       });
-      await prisma.workflowInstance.update({
-        where: { id: application.workflow.id },
-        data: { status: WorkflowStatus.SUSPENDED as never },
-      });
-      log.info('workflow parked awaiting citizen', { applicationId, stepType });
       return { result: 'WAITING_FOR_CITIZEN', reason: handled.reason };
     }
 
@@ -282,6 +281,48 @@ export async function runStep(input: RunStepInput): Promise<StepOutcome> {
       error,
     });
   }
+}
+
+
+/**
+ * Parks an application on the citizen.
+ *
+ * The distinction from REQUIRES_REVIEW matters: an officer opening a file that
+ * is missing a document the citizen must supply has nothing to decide, so the
+ * application must not enter their queue at all. Real government workflows call
+ * this a deficiency memo - the file goes back, not forward.
+ */
+async function parkForCitizen(input: {
+  applicationId: string;
+  workflowInstanceId: string;
+  stepId: string;
+  stepType: StepType;
+  reason: string;
+}): Promise<void> {
+  await prisma.workflowStep.update({
+    where: { id: input.stepId },
+    data: {
+      status: StepStatus.PENDING as never,
+      errorMessage: input.reason,
+      completedAt: null,
+    },
+  });
+  await prisma.workflowInstance.update({
+    where: { id: input.workflowInstanceId },
+    data: { status: WorkflowStatus.SUSPENDED as never },
+  });
+  await prisma.application.update({
+    where: { id: input.applicationId },
+    data: {
+      status: ApplicationStatus.AWAITING_CITIZEN_ACTION as never,
+      currentStep: input.stepType as never,
+    },
+  });
+
+  log.info('workflow parked awaiting citizen', {
+    applicationId: input.applicationId,
+    stepType: input.stepType,
+  });
 }
 
 // ===========================================================================
@@ -650,11 +691,33 @@ async function handleDocumentValidation(ctx: StepContext): Promise<HandlerResult
     where: { applicationId: ctx.applicationId },
   });
 
+  // A step named "document validation" may not complete having validated
+  // nothing. If the service requires evidence and it is absent, the basis for
+  // completing simply does not exist - park on the citizen instead.
+  const required = getServiceDefinition(ctx.serviceType).policy.requiredDocuments;
+  const missing = required.filter(
+    (type) => !documents.some((d) => d.documentType === type),
+  );
+
+  if (missing.length > 0) {
+    const readable = missing.map((m) => m.replace(/_/g, ' ').toLowerCase());
+    await notifyApplicant(
+      ctx.applicationId,
+      'Document required',
+      `Your application cannot proceed until you upload: ${readable.join(', ')}.`,
+      NotificationType.WARNING,
+    );
+    return {
+      kind: 'WAITING_FOR_CITIZEN',
+      reason: `Awaiting required document(s): ${readable.join(', ')}`,
+    };
+  }
+
   if (documents.length === 0) {
+    // No documents required by this service, and none supplied.
     return {
       kind: 'DONE',
-      output: { processed: 0, note: 'No documents were uploaded.' },
-      warning: 'No documents uploaded - the data quality step will flag what is missing.',
+      output: { processed: 0, note: 'This service requires no supporting documents.' },
     };
   }
 
@@ -671,16 +734,30 @@ async function handleDocumentValidation(ctx: StepContext): Promise<HandlerResult
         document.mimeType,
         document.documentType,
       );
+      // Advisory only: a type mismatch is surfaced to the officer, never
+      // used to reject the upload or the application.
+      const classification = classifyDocument(result.textPreview, document.documentType);
+
       await prisma.document.update({
         where: { id: document.id },
         data: {
           extractionStatus: 'COMPLETED' as never,
-          extractedData: result.fields as never,
+          extractedData: {
+            ...result.fields,
+            typeCheck: {
+              matches: classification.matches,
+              looksLike: classification.looksLike,
+              confidence: classification.confidence,
+              reason: classification.reason,
+            },
+          } as never,
           extractionEngine: `${result.ocrEngine}+${result.engine}`,
-          validationStatus: (result.ocrEngine === 'UNAVAILABLE'
+          validationStatus: (!classification.matches || result.ocrEngine === 'UNAVAILABLE'
             ? ValidationStatus.WARNING
             : ValidationStatus.PASSED) as never,
-          validationNotes: result.engineNote,
+          validationNotes: classification.matches
+            ? result.engineNote
+            : `${classification.reason} ${result.engineNote}`,
         },
       });
       processed.push({
@@ -787,6 +864,26 @@ async function handleDataQuality(ctx: StepContext): Promise<HandlerResult> {
       notify: false,
     });
   }
+  // Route by WHO CAN RESOLVE the blocker, not by how serious it is.
+  // A missing document is only fixable by the citizen, so sending it to an
+  // officer wastes the scarcest resource in the system on a file they cannot
+  // act on. Judgement calls - mismatches, eligibility hints - do go forward.
+  const citizenBlockers = serious.filter((f) => CITIZEN_RESOLVABLE.has(f.kind));
+
+  if (citizenBlockers.length > 0) {
+    const summary = citizenBlockers.map((f) => f.message).join(' ');
+    await notifyApplicant(
+      ctx.applicationId,
+      'Action needed on your application',
+      summary,
+      NotificationType.WARNING,
+    );
+    return {
+      kind: 'WAITING_FOR_CITIZEN',
+      reason: `Awaiting citizen action: ${citizenBlockers.map((f) => f.field).join(', ')}`,
+    };
+  }
+
   if (serious.length > 0) {
     await notifyRole(
       [Role.OFFICER],
@@ -809,6 +906,16 @@ async function handleDataQuality(ctx: StepContext): Promise<HandlerResult> {
     warning: report.findings.length > 0 ? report.summary : undefined,
   };
 }
+
+/**
+ * Findings only the citizen can clear. Everything else needs officer judgement.
+ * A document that looks like the wrong type is deliberately NOT here: whether
+ * it is genuinely wrong is a judgement, and wrongly bouncing a citizen is worse
+ * than costing an officer a moment.
+ */
+const CITIZEN_RESOLVABLE = new Set<string>([
+  FINDING_KIND.MISSING_DOCUMENT,
+]);
 
 function exceptionTypeForFinding(finding: ValidationFinding): ExceptionType {
   switch (finding.kind) {

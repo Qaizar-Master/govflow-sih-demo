@@ -5,6 +5,7 @@ import { extractFields } from './extract.js';
 export * from './ocr.js';
 export * from './extract.js';
 export * from './dates.js';
+export * from './classify.js';
 
 /**
  * DocumentProcessor

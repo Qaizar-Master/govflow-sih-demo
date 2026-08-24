@@ -34,9 +34,8 @@ export default function CitizenDashboard() {
     (a) => !['APPROVED', 'REJECTED'].includes(a.status),
   );
   const approved = items.filter((a) => a.status === 'APPROVED');
-  const needsAttention = items.filter(
-    (a) => a.status === 'REQUIRES_REVIEW' || a.openExceptions > 0,
-  );
+  // "Needs your attention" means the citizen can actually do something about it.
+  const needsAttention = items.filter((a) => a.status === 'AWAITING_CITIZEN_ACTION');
 
   return (
     <>
@@ -130,9 +129,9 @@ export default function CitizenDashboard() {
       )}
 
       {needsAttention.length > 0 ? (
-        <Alert variant="warning" className="mt-6" title="Some applications need attention">
-          {needsAttention.length} application(s) are blocked or flagged. Open one to see whether
-          a consent is missing, a document is required, or a department is unavailable.
+        <Alert variant="warning" className="mt-6" title="Some applications need something from you">
+          {needsAttention.length} application(s) are paused until you act — usually a missing
+          document or an outstanding consent. Open one to see exactly what is needed.
         </Alert>
       ) : null}
     </>

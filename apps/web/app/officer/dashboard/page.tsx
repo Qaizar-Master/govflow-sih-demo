@@ -74,6 +74,13 @@ export default function OfficerDashboard() {
           icon={Clock}
         />
         <StatCard
+          label="Blocked on citizen"
+          value={m.awaitingCitizen}
+          hint="Not in your queue — the applicant must act"
+          tone={m.awaitingCitizen > 0 ? 'warning' : 'default'}
+          icon={Clock}
+        />
+        <StatCard
           label="At SLA risk"
           value={m.atRisk}
           tone={m.atRisk > 0 ? 'warning' : 'success'}

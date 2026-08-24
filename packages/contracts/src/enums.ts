@@ -24,6 +24,12 @@ export const ApplicationStatus = {
   DRAFT: 'DRAFT',
   SUBMITTED: 'SUBMITTED',
   PROCESSING: 'PROCESSING',
+  /**
+   * Blocked on something only the citizen can supply - a missing document or
+   * an ungranted consent. Deliberately distinct from REQUIRES_REVIEW: it must
+   * NOT reach an officer, because there is nothing for them to decide yet.
+   */
+  AWAITING_CITIZEN_ACTION: 'AWAITING_CITIZEN_ACTION',
   REQUIRES_REVIEW: 'REQUIRES_REVIEW',
   UNDER_REVIEW: 'UNDER_REVIEW',
   APPROVED: 'APPROVED',

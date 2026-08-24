@@ -233,8 +233,30 @@ export function runRuleBasedValidation(subject: ValidationSubject): ValidationRe
 
   // ---- 7. Document field agreement with the registries -------------------
   for (const doc of documents) {
-    const extracted = doc.extracted;
+    const extracted = doc.extracted as
+      | (typeof doc.extracted & {
+          typeCheck?: { matches: boolean; looksLike: string | null; reason: string; confidence: number };
+        })
+      | null
+      | undefined;
     if (!extracted) continue;
+
+    // Advisory type check: the file may simply be the wrong attachment.
+    const typeCheck = extracted.typeCheck;
+    if (typeCheck && !typeCheck.matches) {
+      findings.push({
+        kind: FINDING_KIND.DOCUMENT_TYPE_MISMATCH,
+        severity: Severity.HIGH,
+        field: doc.documentType.toLowerCase(),
+        message: `The file uploaded as a ${doc.documentType.replace(/_/g, ' ').toLowerCase()} does not appear to be one. ${typeCheck.reason} Confirm before deciding.`,
+        observed: {
+          DECLARED: doc.documentType,
+          LOOKS_LIKE: typeCheck.looksLike ?? 'unrecognised',
+        },
+        confidence: typeCheck.confidence,
+      });
+    }
+
     if (extracted.name && identity?.name) {
       const cmp = compareNames(identity.name, extracted.name);
       if (!cmp.identical && !cmp.abbreviationOnly && cmp.score < 0.75) {

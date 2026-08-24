@@ -19,6 +19,7 @@ const APPLICATION_VARIANT: Record<ApplicationStatus, Variant> = {
   DRAFT: 'muted',
   SUBMITTED: 'info',
   PROCESSING: 'info',
+  AWAITING_CITIZEN_ACTION: 'warning',
   REQUIRES_REVIEW: 'warning',
   UNDER_REVIEW: 'info',
   APPROVED: 'success',
@@ -63,9 +64,16 @@ const DEPARTMENT_VARIANT: Record<DepartmentStatus, Variant> = {
   OFFLINE: 'destructive',
 };
 
+const APPLICATION_LABEL: Partial<Record<ApplicationStatus, string>> = {
+  // "Awaiting citizen action" is what it means to the officer; the citizen's
+  // own screens phrase it as something they need to do.
+  AWAITING_CITIZEN_ACTION: 'Action needed',
+};
+
 export function StatusBadge({ status }: { status: ApplicationStatus | string }) {
   const variant = APPLICATION_VARIANT[status as ApplicationStatus] ?? 'muted';
-  return <Badge variant={variant}>{humanise(status)}</Badge>;
+  const label = APPLICATION_LABEL[status as ApplicationStatus] ?? humanise(status);
+  return <Badge variant={variant}>{label}</Badge>;
 }
 
 export function StepBadge({ status }: { status: StepStatus | string }) {

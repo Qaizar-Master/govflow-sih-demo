@@ -252,8 +252,16 @@ function planFor(scenario: Scenario, serviceType: string) {
         workflowStatus: 'WAITING_FOR_OFFICER' as const,
         currentStep: 'OFFICER_REVIEW' as const,
       };
-    case 'MISMATCH':
     case 'MISSING_DOCUMENT':
+      // Blocked at the document gate: only the citizen can clear it.
+      return {
+        completed: all.slice(0, all.indexOf('DOCUMENT_VALIDATION')),
+        applicationStatus: 'AWAITING_CITIZEN_ACTION' as const,
+        workflowStatus: 'SUSPENDED' as const,
+        currentStep: 'DOCUMENT_VALIDATION' as const,
+        citizenBlocked: true,
+      };
+    case 'MISMATCH':
     case 'SLA_OVERDUE':
       return {
         completed: automated,
@@ -523,6 +531,13 @@ async function main() {
       if ('pendingConsent' in plan && plan.pendingConsent && def.stepType === 'CONSENT') {
         errorMessage = 'Awaiting citizen consent for: EDUCATION';
       }
+      if (
+        'citizenBlocked' in plan &&
+        plan.citizenBlocked &&
+        def.stepType === 'DOCUMENT_VALIDATION'
+      ) {
+        errorMessage = 'Awaiting required document(s): income certificate';
+      }
 
       const stepStart =
         status === 'PENDING'
@@ -768,24 +783,6 @@ async function main() {
         confidence: 0.95,
       });
     }
-    if (spec.scenario === 'MISSING_DOCUMENT') {
-      findings.push({
-        kind: 'MISSING_DOCUMENT',
-        severity: 'HIGH',
-        field: 'income_certificate',
-        message: 'Required document not uploaded: income certificate.',
-        observed: { DOCUMENTS: null },
-        confidence: 1,
-      });
-      findings.push({
-        kind: 'STALE_DATA',
-        severity: 'MEDIUM',
-        field: 'incomeYear',
-        message: `Income assessment year is ${income?.incomeYear}, 3 years old.`,
-        observed: { INCOME: income?.incomeYear },
-        confidence: 1,
-      });
-    }
     if (spec.scenario === 'SLA_OVERDUE') {
       findings.push({
         kind: 'ELIGIBILITY_HINT',
@@ -917,6 +914,19 @@ async function main() {
           title: 'Your application has been rejected',
           message: `Application ${application.applicationNumber} has been rejected.`,
           createdAt: application.decisionAt!,
+        },
+      });
+    }
+    if (spec.scenario === 'MISSING_DOCUMENT') {
+      await prisma.notification.create({
+        data: {
+          userId: citizen.userId,
+          applicationId: application.id,
+          type: 'WARNING' as never,
+          title: 'Document required',
+          message:
+            'Your application cannot proceed until you upload: income certificate.',
+          createdAt: new Date(submittedAt.getTime() + 12 * 60_000),
         },
       });
     }
