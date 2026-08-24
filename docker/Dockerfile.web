@@ -8,6 +8,7 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY package.json package-lock.json ./
+COPY prisma.config.ts ./
 COPY prisma ./prisma
 COPY packages ./packages
 COPY apps/web ./apps/web

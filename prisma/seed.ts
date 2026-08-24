@@ -10,7 +10,6 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { PrismaClient } from '@prisma/client';
 import { createConnector } from '@govflow/connector-sdk';
 import {
   DEPARTMENTS,
@@ -20,10 +19,10 @@ import {
   env,
   type IdentityFacts,
 } from '@govflow/contracts';
-import { hashPassword } from '@govflow/core';
+// Reuses the shared client so the Prisma 7 driver adapter is configured once.
+import { hashPassword, prisma } from '@govflow/core';
 import { EDUCATION, IDENTITY, INCOME } from '../services/mock-departments/src/data.js';
 
-const prisma = new PrismaClient();
 const FORCE = process.argv.includes('--force');
 const DEMO_PASSWORD = 'Password@123';
 

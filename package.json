@@ -22,10 +22,10 @@
     "infra:up": "docker compose up -d postgres redis",
     "infra:down": "docker compose down",
     "prisma:generate": "prisma generate",
-    "prisma:push": "prisma db push --skip-generate",
+    "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma db push --force-reset --skip-generate && npm run db:seed",
+    "db:reset": "prisma db push --force-reset --accept-data-loss && npm run db:seed",
     "typecheck": "tsc -p tsconfig.json && npm run typecheck -w @govflow/web",
     "lint": "eslint . --ext .ts,.tsx --max-warnings 0",
     "test": "vitest run",
@@ -39,14 +39,16 @@
     "@typescript-eslint/eslint-plugin": "^8.18.1",
     "@typescript-eslint/parser": "^8.18.1",
     "concurrently": "^9.1.0",
+    "dotenv": "^16.4.7",
     "eslint": "^8.57.1",
-    "prisma": "^6.1.0",
+    "prisma": "^7.9.1",
     "supertest": "^7.0.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   },
   "dependencies": {
-    "@prisma/client": "^6.1.0"
+    "@prisma/adapter-pg": "^7.9.1",
+    "@prisma/client": "^7.9.1"
   }
 }

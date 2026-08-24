@@ -40,7 +40,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile.node
     container_name: govflow-mock-departments
-    command: ['npm', 'run', 'start', '-w', '@govflow/mock-departments']
+    command: ['node', '--import', 'tsx', 'services/mock-departments/src/server.ts']
     environment:
       NODE_ENV: production
       MOCK_DEPARTMENTS_PORT: '5001'
@@ -114,7 +114,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile.node
     container_name: govflow-worker
-    command: ['npm', 'run', 'start', '-w', '@govflow/workflow-worker']
+    command: ['node', '--import', 'tsx', 'workers/workflow-worker/src/main.ts']
     environment: *backend-env
     volumes:
       - govflow-uploads:/app/data/uploads

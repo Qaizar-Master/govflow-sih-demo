@@ -9,7 +9,7 @@ set -euo pipefail
 
 echo "[govflow] applying schema (prisma db push)..."
 for attempt in $(seq 1 20); do
-  if npx prisma db push --skip-generate --accept-data-loss; then
+  if npx prisma db push --accept-data-loss; then
     break
   fi
   if [ "$attempt" -eq 20 ]; then
@@ -24,4 +24,7 @@ echo "[govflow] seeding synthetic demo data..."
 npx tsx prisma/seed.ts
 
 echo "[govflow] starting API..."
-exec npm run start -w @govflow/api
+# exec node directly rather than via npm: the container's PID 1 must be the API
+# process itself, otherwise SIGTERM stops at the npm wrapper and the graceful
+# shutdown handler (queue drain + prisma disconnect) never runs.
+exec node --import tsx apps/api/src/server.ts

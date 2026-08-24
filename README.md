@@ -114,9 +114,9 @@ Full diagrams, the dependency rules and the failure model: **[docs/architecture.
 
 | Layer | Choice |
 |---|---|
-| Frontend | Next.js 15 (App Router), TypeScript, Tailwind CSS, shadcn/ui |
+| Frontend | Next.js 15 (App Router), TypeScript, Tailwind CSS v4, shadcn/ui |
 | Backend | Node.js, Express, TypeScript, REST/JSON, OpenAPI 3 |
-| Database | PostgreSQL 16 + Prisma |
+| Database | PostgreSQL 16 + Prisma 7 (query compiler + `@prisma/adapter-pg` driver adapter) |
 | Async | Redis 7 + BullMQ |
 | AI | Gemini API (optional) with a deterministic rule engine underneath |
 | Documents | Text-layer extraction + pluggable OCR slot |
@@ -126,6 +126,14 @@ Full diagrams, the dependency rules and the failure model: **[docs/architecture.
 
 Backend TypeScript runs directly via `tsx` — no build step to fall out of sync during a
 demo. Typechecking still covers every workspace.
+
+Two version notes, because both are recent majors:
+
+- **Tailwind v4 is CSS-first.** There is no `tailwind.config.ts`; the design tokens in
+  `apps/web/app/globals.css` (`@theme inline`) *are* the configuration.
+- **Prisma 7 drops the Rust query engine.** The connection URL lives in
+  `prisma.config.ts` for CLI commands, and the runtime client is constructed with the
+  `@prisma/adapter-pg` driver adapter in `packages/core/src/db.ts`.
 
 ## 6. Repository structure
 
@@ -144,6 +152,7 @@ govflow/
 │   ├── connector-sdk/          Connector framework: base, REST, CSV, mapping engine
 │   └── core/                   Domain: workflow engine, validation, documents,
 │                               audit, exceptions, SLA, metrics, Prisma client
+├── prisma.config.ts            Prisma 7 config — datasource URL + seed command
 ├── prisma/                     schema.prisma + seed.ts
 ├── data/
 │   ├── legacy/                 beneficiaries.csv (the legacy department)
@@ -420,6 +429,9 @@ end-to-end run from submission through four departments to officer approval.
 | Web shows "API unreachable" | `NEXT_PUBLIC_API_URL` is baked at build time — rebuild after changing it |
 | Integration tests skipped | Expected without infrastructure: `npm run infra:up && npm run dev:mocks` |
 | Want a pristine demo | `docker compose down -v && docker compose up --build` |
+| `PrismaConfigEnvError: Cannot resolve environment variable` | Only if you removed the default in `prisma.config.ts`; set `DATABASE_URL` or restore it |
+| Prisma asks for `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION` | Prisma 7 guards destructive commands when it detects an AI agent in the environment. Run the command yourself in a normal shell |
+| Styles missing after an edit to `globals.css` | Tailwind v4 has no config file — check the `@theme inline` block, not a `tailwind.config.ts` |
 
 On **Zorin OS / Ubuntu**, if `docker compose` reports a permission error, add yourself to
 the docker group and start a new session:

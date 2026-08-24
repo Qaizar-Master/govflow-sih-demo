@@ -10,6 +10,7 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY package.json package-lock.json ./
+COPY prisma.config.ts ./
 COPY prisma ./prisma
 COPY packages ./packages
 COPY apps/api ./apps/api
@@ -29,4 +30,4 @@ COPY tsconfig.base.json tsconfig.json ./
 ENV NODE_ENV=production
 EXPOSE 4000 5001
 
-CMD ["npm", "run", "start", "-w", "@govflow/api"]
+CMD ["node", "--import", "tsx", "apps/api/src/server.ts"]
