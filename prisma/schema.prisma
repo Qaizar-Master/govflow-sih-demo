@@ -23,6 +23,8 @@ enum Role {
 
 enum ServiceType {
   SCHOLARSHIP
+  INCOME_CERTIFICATE
+  RATION_CARD
 }
 
 enum ApplicationStatus {

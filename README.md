@@ -14,7 +14,7 @@ systems cooperate on a single citizen application — without replacing any of t
 
 ## 1. Project overview
 
-A citizen applies for a state scholarship. Establishing eligibility needs three
+A citizen applies for a government service. Establishing eligibility needs three
 departments plus one legacy system, each built at a different time by a different team:
 
 | System | Interface | Schema style | Auth | Identifier |
@@ -26,6 +26,17 @@ departments plus one legacy system, each built at a different time by a differen
 
 GovFlow sits in front of them and produces one application number, one consent ledger, one
 normalised record, one timeline and one audit trail.
+
+**Three services run on this one integration layer**, which is the point:
+
+| Service | Departments consulted | Steps | Target | Distinguishing rule |
+|---|---|---|---|---|
+| Merit-cum-Means Scholarship | Identity, Income, Education, Legacy | 9 | 5 days | Income ceiling ₹2,50,000 + active enrolment |
+| Income Certificate | Identity, Income | 7 | 3 days | An *issuance*, so no means test at all |
+| Ration Card (PDS) | Identity, Income, Legacy | 8 | 7 days | Duplicate-benefit check against the legacy register |
+
+Adding the second and third services required **no new connectors** — only a service
+definition. That is what a middleware layer is for.
 
 ## 2. The problem being solved
 

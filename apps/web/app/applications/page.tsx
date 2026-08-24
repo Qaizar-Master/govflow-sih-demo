@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { FilePlus2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { usePolling, useRequireRole } from '@/lib/auth';
-import { formatCurrency, formatDate, humanise } from '@/lib/format';
+import { formatDate, humanise } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/misc';
@@ -74,7 +74,6 @@ export default function MyApplicationsPage() {
                         {application.applicationNumber}
                       </span>
                       <span className="text-[11px] text-muted-foreground">
-                        {formatCurrency(null)}
                         {humanise(application.serviceType)}
                       </span>
                     </td>

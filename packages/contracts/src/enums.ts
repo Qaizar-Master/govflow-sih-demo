@@ -15,6 +15,8 @@ export type Role = (typeof Role)[keyof typeof Role];
 
 export const ServiceType = {
   SCHOLARSHIP: 'SCHOLARSHIP',
+  INCOME_CERTIFICATE: 'INCOME_CERTIFICATE',
+  RATION_CARD: 'RATION_CARD',
 } as const;
 export type ServiceType = (typeof ServiceType)[keyof typeof ServiceType];
 

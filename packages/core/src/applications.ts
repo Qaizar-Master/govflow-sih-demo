@@ -5,10 +5,9 @@ import {
   DEPARTMENTS,
   NotificationType,
   Role,
-  SCHOLARSHIP_WORKFLOW,
   ServiceType,
+  getServiceDefinition,
   StepStatus,
-  workflowConfig,
   type SlaAssessment,
 } from '@govflow/contracts';
 import { prisma } from './db.js';
@@ -21,26 +20,23 @@ import { assembleFacts } from './workflow/facts.js';
 
 const log = createLogger('applications');
 
-/** Consent scopes a scholarship application needs, with a stated purpose. */
-export const CONSENT_SCOPES = [
-  {
-    departmentCode: 'IDENTITY',
-    purpose: 'Verify the applicant’s identity, date of birth and district of residence.',
-  },
-  {
-    departmentCode: 'INCOME',
-    purpose: 'Confirm declared annual family income against the income registry.',
-  },
-  {
-    departmentCode: 'EDUCATION',
-    purpose: 'Confirm active enrolment and institution details.',
-  },
-] as const;
+/** Consent scopes for a service, each with a stated purpose. */
+export function consentScopesFor(serviceType: string) {
+  return getServiceDefinition(serviceType).consentScopes;
+}
 
-async function nextApplicationNumber(): Promise<string> {
+/** Application numbers carry the service, the way real dockets do. */
+const APPLICATION_PREFIX: Record<string, string> = {
+  SCHOLARSHIP: 'GF-SCH',
+  INCOME_CERTIFICATE: 'GF-INC',
+  RATION_CARD: 'GF-PDS',
+};
+
+async function nextApplicationNumber(serviceType: string): Promise<string> {
   const year = new Date().getFullYear();
   const count = await prisma.application.count();
-  return `GF-SCH-${year}-${String(count + 1).padStart(5, '0')}`;
+  const prefix = APPLICATION_PREFIX[serviceType] ?? 'GF-APP';
+  return `${prefix}-${year}-${String(count + 1).padStart(5, '0')}`;
 }
 
 export interface CreateApplicationInput {
@@ -62,6 +58,7 @@ export async function createApplication(input: CreateApplicationInput) {
   const citizen = await prisma.citizen.findUnique({ where: { id: input.citizenId } });
   if (!citizen) throw new Error(`Citizen ${input.citizenId} not found`);
 
+  const service = getServiceDefinition(input.serviceType ?? ServiceType.SCHOLARSHIP);
   const granted = new Set((input.grantedConsents ?? []).map((c) => c.toUpperCase()));
 
   // Retry once on the (unlikely) concurrent-submission number collision.
@@ -70,15 +67,16 @@ export async function createApplication(input: CreateApplicationInput) {
     try {
       application = await prisma.application.create({
         data: {
-          applicationNumber: await nextApplicationNumber(),
+          applicationNumber: await nextApplicationNumber(service.serviceType),
           citizenId: citizen.id,
-          serviceType: (input.serviceType ?? ServiceType.SCHOLARSHIP) as never,
+          serviceType: service.serviceType as never,
           status: ApplicationStatus.SUBMITTED as never,
           requestedAmount: input.requestedAmount ?? null,
           institutionClaim: input.institutionClaim ?? null,
-          slaTargetDays: workflowConfig.slaTargetDays,
+          // Each service carries its own processing target.
+          slaTargetDays: service.slaTargetDays,
           consents: {
-            create: CONSENT_SCOPES.map((scope) => ({
+            create: service.consentScopes.map((scope) => ({
               citizenId: citizen.id,
               departmentCode: scope.departmentCode,
               purpose: scope.purpose,
@@ -110,7 +108,7 @@ export async function createApplication(input: CreateApplicationInput) {
       consentsGrantedAtSubmission: [...granted],
     },
   });
-  for (const scope of CONSENT_SCOPES) {
+  for (const scope of service.consentScopes) {
     await recordAudit({
       action: granted.has(scope.departmentCode)
         ? AuditAction.CONSENT_GRANTED
@@ -155,10 +153,9 @@ export interface GrantConsentInput {
  */
 export async function setConsent(input: GrantConsentInput) {
   const code = input.departmentCode.toUpperCase();
-  if (!CONSENT_SCOPES.some((s) => s.departmentCode === code)) {
-    throw new Error(`Unknown consent scope: ${code}`);
-  }
 
+  // The scope must belong to this application's service - a consent row exists
+  // only for scopes the service actually declared.
   const existing = await prisma.consent.findUnique({
     where: {
       applicationId_departmentCode: { applicationId: input.applicationId, departmentCode: code },
@@ -244,12 +241,17 @@ export interface TimelineEntry {
 export async function getTimeline(applicationId: string): Promise<TimelineEntry[]> {
   const workflow = await prisma.workflowInstance.findUnique({
     where: { applicationId },
-    include: { steps: { orderBy: { order: 'asc' } } },
+    include: {
+      steps: { orderBy: { order: 'asc' } },
+      application: { select: { serviceType: true } },
+    },
   });
   if (!workflow) return [];
 
+  const steps = getServiceDefinition(workflow.application.serviceType).steps;
+
   return workflow.steps.map((step) => {
-    const def = SCHOLARSHIP_WORKFLOW.find((d) => d.stepType === step.stepType);
+    const def = steps.find((d) => d.stepType === step.stepType);
     const department = step.department
       ? DEPARTMENTS.find((d) => d.code === step.department)
       : undefined;

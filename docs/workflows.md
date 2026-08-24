@@ -1,10 +1,22 @@
 # GovFlow — Workflow reference
 
-The scholarship workflow is defined once, declaratively, in
-`packages/contracts/src/workflow.ts`. The engine walks that definition; the UI renders it.
-Neither hard-codes a step list.
+Every service is defined declaratively in `packages/contracts/src/workflow.ts`. The engine
+walks the definition for whichever service an application belongs to; the UI renders it.
+Neither hard-codes a step list, and neither knows how many services exist.
 
-## The nine steps
+## The service catalogue
+
+| Service | Steps | Target | Departments | Policy |
+|---|---|---|---|---|
+| `SCHOLARSHIP` | 9 | 5 days | Identity, Income, Education, Legacy | ceiling ₹2,50,000; active enrolment; 2 documents |
+| `INCOME_CERTIFICATE` | 7 | 3 days | Identity, Income | no ceiling; no documents (the certificate is the output) |
+| `RATION_CARD` | 8 | 7 days | Identity, Income, Legacy | ceiling ₹1,80,000; duplicate-benefit flag |
+
+All three compose from **one shared step vocabulary** and are served by **the same four
+connectors**. A test asserts that no service can introduce a department outside the
+registry, so "adding a service adds no integration" stays true rather than being a claim.
+
+## The scholarship steps
 
 | # | Step | Department | Consent required | Automated | Blocking |
 |---|---|---|---|---|---|

@@ -7,7 +7,7 @@ import {
   JOB_NAMES,
   NotificationType,
   Role,
-  SCHOLARSHIP_WORKFLOW,
+  getServiceDefinition,
   Severity,
   StepStatus,
   StepType,
@@ -33,8 +33,6 @@ import { assembleFacts, unavailableSources } from './facts.js';
 
 const log = createLogger('workflow');
 
-const REQUIRED_CONSENT_SCOPES = ['IDENTITY', 'INCOME', 'EDUCATION'];
-
 /** Which BullMQ job name carries each step. */
 export function jobNameForStep(stepType: StepType): string {
   switch (stepType) {
@@ -55,15 +53,23 @@ export function jobNameForStep(stepType: StepType): string {
   }
 }
 
-function definitionFor(stepType: StepType): WorkflowStepDefinition {
-  const def = SCHOLARSHIP_WORKFLOW.find((s) => s.stepType === stepType);
-  if (!def) throw new Error(`No workflow definition for step ${stepType}`);
+function definitionFor(serviceType: string, stepType: StepType): WorkflowStepDefinition {
+  const def = getServiceDefinition(serviceType).steps.find((s) => s.stepType === stepType);
+  if (!def) throw new Error(`Service ${serviceType} has no step ${stepType}`);
   return def;
 }
 
-function nextDefinition(stepType: StepType): WorkflowStepDefinition | null {
-  const current = definitionFor(stepType);
-  return SCHOLARSHIP_WORKFLOW.find((s) => s.order === current.order + 1) ?? null;
+function nextDefinition(serviceType: string, stepType: StepType): WorkflowStepDefinition | null {
+  const steps = getServiceDefinition(serviceType).steps;
+  const current = definitionFor(serviceType, stepType);
+  return steps.find((s) => s.order === current.order + 1) ?? null;
+}
+
+/** The departments a service consults, so validation only expects those. */
+function expectedSources(serviceType: string): string[] {
+  return getServiceDefinition(serviceType)
+    .steps.map((s) => s.departmentCode)
+    .filter((c): c is string => c !== null && c !== 'LEGACY');
 }
 
 // ===========================================================================
@@ -78,21 +84,26 @@ function nextDefinition(stepType: StepType): WorkflowStepDefinition | null {
 export async function startWorkflow(applicationId: string) {
   const application = await prisma.application.findUnique({
     where: { id: applicationId },
-    select: { id: true, applicationNumber: true },
+    select: { id: true, applicationNumber: true, serviceType: true },
   });
   if (!application) throw new Error(`Application ${applicationId} not found`);
+
+  // The service definition decides which steps exist for this application.
+  const service = getServiceDefinition(application.serviceType);
+  const steps = service.steps;
 
   const instance = await prisma.workflowInstance.upsert({
     where: { applicationId },
     create: {
       applicationId,
+      definitionName: `${application.serviceType.toLowerCase()}-v1`,
       status: WorkflowStatus.RUNNING as never,
-      currentStep: SCHOLARSHIP_WORKFLOW[0]!.stepType as never,
+      currentStep: steps[0]!.stepType as never,
     },
     update: { status: WorkflowStatus.RUNNING as never },
   });
 
-  for (const def of SCHOLARSHIP_WORKFLOW) {
+  for (const def of steps) {
     await prisma.workflowStep.upsert({
       where: {
         workflowInstanceId_stepType: {
@@ -117,7 +128,7 @@ export async function startWorkflow(applicationId: string) {
     where: { id: applicationId },
     data: {
       status: ApplicationStatus.PROCESSING as never,
-      currentStep: SCHOLARSHIP_WORKFLOW[0]!.stepType as never,
+      currentStep: steps[0]!.stepType as never,
     },
   });
 
@@ -128,14 +139,15 @@ export async function startWorkflow(applicationId: string) {
     metadata: {
       applicationId,
       applicationNumber: application.applicationNumber,
-      steps: SCHOLARSHIP_WORKFLOW.length,
+      serviceType: application.serviceType,
+      steps: steps.length,
     },
   });
 
   await enqueueStep(JOB_NAMES.APPLICATION_CREATED, {
     applicationId,
     workflowInstanceId: instance.id,
-    stepType: SCHOLARSHIP_WORKFLOW[0]!.stepType,
+    stepType: steps[0]!.stepType,
   });
 
   return instance;
@@ -223,6 +235,7 @@ export async function runStep(input: RunStepInput): Promise<StepOutcome> {
       citizenId: application.citizen.id,
       citizenExternalId: application.citizen.externalId,
       applicationNumber: application.applicationNumber,
+      serviceType: application.serviceType,
     });
 
     if (handled.kind === 'WAITING_FOR_CITIZEN') {
@@ -255,11 +268,12 @@ export async function runStep(input: RunStepInput): Promise<StepOutcome> {
       metadata: { applicationId, stepType, attempt },
     });
 
-    return await advance(applicationId, application.workflow.id, stepType);
+    return await advance(applicationId, application.serviceType, application.workflow.id, stepType);
   } catch (error) {
     return await handleStepFailure({
       applicationId,
       applicationNumber: application.applicationNumber,
+      serviceType: application.serviceType,
       workflowInstanceId: application.workflow.id,
       stepId: step.id,
       stepType,
@@ -276,10 +290,11 @@ export async function runStep(input: RunStepInput): Promise<StepOutcome> {
 
 async function advance(
   applicationId: string,
+  serviceType: string,
   workflowInstanceId: string,
   completedStep: StepType,
 ): Promise<StepOutcome> {
-  const next = nextDefinition(completedStep);
+  const next = nextDefinition(serviceType, completedStep);
 
   if (!next) {
     await prisma.workflowInstance.update({
@@ -355,6 +370,7 @@ async function advance(
 interface FailureInput {
   applicationId: string;
   applicationNumber: string;
+  serviceType: string;
   workflowInstanceId: string;
   stepId: string;
   stepType: StepType;
@@ -365,7 +381,7 @@ interface FailureInput {
 
 async function handleStepFailure(input: FailureInput): Promise<StepOutcome> {
   const { applicationId, stepId, stepType, attempt, maxAttempts, error } = input;
-  const def = definitionFor(stepType);
+  const def = definitionFor(input.serviceType, stepType);
   const connectorError = isConnectorError(error) ? error : null;
   const retryable = connectorError?.retryable ?? false;
   const message =
@@ -447,7 +463,7 @@ async function handleStepFailure(input: FailureInput): Promise<StepOutcome> {
   if (!blocking) {
     // Non-blocking department: record the failure and keep the workflow moving.
     log.warn('non-blocking step failed, continuing', { applicationId, stepType });
-    return await advance(applicationId, input.workflowInstanceId, stepType);
+    return await advance(applicationId, input.serviceType, input.workflowInstanceId, stepType);
   }
 
   await prisma.workflowInstance.update({
@@ -472,6 +488,7 @@ interface StepContext {
   citizenId: string;
   citizenExternalId: string;
   applicationNumber: string;
+  serviceType: string;
 }
 
 type HandlerResult =
@@ -502,7 +519,13 @@ async function handleConsent(ctx: StepContext): Promise<HandlerResult> {
     where: { applicationId: ctx.applicationId },
   });
 
-  const missing = REQUIRED_CONSENT_SCOPES.filter((scope) => {
+  // Each service declares its own consent scopes: an income certificate never
+  // asks for education data, so it must not wait on that consent.
+  const required = getServiceDefinition(ctx.serviceType).consentScopes.map(
+    (scope) => scope.departmentCode,
+  );
+
+  const missing = required.filter((scope) => {
     const consent = consents.find((c) => c.departmentCode === scope);
     return consent?.status !== ConsentStatus.GRANTED;
   });
@@ -541,7 +564,7 @@ async function handleDepartmentLookup(
   stepType: StepType,
   ctx: StepContext,
 ): Promise<HandlerResult> {
-  const def = definitionFor(stepType);
+  const def = definitionFor(ctx.serviceType, stepType);
   const code = def.departmentCode!;
 
   if (def.requiresConsentFor) {
@@ -708,6 +731,8 @@ async function handleDataQuality(ctx: StepContext): Promise<HandlerResult> {
     unavailableSources(ctx.applicationId),
   ]);
 
+  const service = getServiceDefinition(ctx.serviceType);
+
   const report = await produceValidationReport({
     identity: facts.identity,
     income: facts.income,
@@ -718,6 +743,10 @@ async function handleDataQuality(ctx: StepContext): Promise<HandlerResult> {
       extracted: (d.extractedData ?? null) as never,
     })),
     unavailableSources: unavailable,
+    // Policy is per service, so one engine serves a means-tested benefit and a
+    // plain certificate issuance without branching.
+    policy: service.policy,
+    expectedSources: expectedSources(ctx.serviceType),
   });
 
   await prisma.application.update({
@@ -825,7 +854,7 @@ export async function resumeWorkflow(
   );
   if (!target) return { resumedStep: null };
 
-  const def = definitionFor(target.stepType as StepType);
+  const def = definitionFor(application.serviceType, target.stepType as StepType);
   if (!def.automated) {
     await prisma.workflowInstance.update({
       where: { id: application.workflow.id },

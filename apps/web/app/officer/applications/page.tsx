@@ -13,6 +13,13 @@ import { ErrorBlock, LoadingBlock, PageHeader } from '@/components/govflow/shell
 import { SlaBadge, StatusBadge, ValidationBadge } from '@/components/govflow/status';
 import type { ApplicationListItem, Paginated } from '@/lib/types';
 
+/** Short service labels for table columns. */
+const SERVICE_LABEL: Record<string, string> = {
+  SCHOLARSHIP: 'Scholarship',
+  INCOME_CERTIFICATE: 'Income certificate',
+  RATION_CARD: 'Ration card',
+};
+
 const FILTERS = [
   { value: '', label: 'All statuses' },
   { value: 'REQUIRES_REVIEW', label: 'Flagged for review' },
@@ -89,6 +96,7 @@ export default function OfficerQueuePage() {
             <thead>
               <tr>
                 <th>Application</th>
+                <th>Service</th>
                 <th>Citizen</th>
                 <th>District</th>
                 <th>Submitted</th>
@@ -105,6 +113,9 @@ export default function OfficerQueuePage() {
                 <tr key={application.id}>
                   <td className="font-mono text-xs font-medium">
                     {application.applicationNumber}
+                  </td>
+                  <td className="text-xs">
+                    {SERVICE_LABEL[application.serviceType] ?? application.serviceType}
                   </td>
                   <td className="text-xs">
                     <span className="block font-medium">{application.citizenName}</span>
@@ -145,7 +156,7 @@ export default function OfficerQueuePage() {
               ))}
               {items.length === 0 && !loading ? (
                 <tr>
-                  <td colSpan={10} className="py-10 text-center text-sm text-muted-foreground">
+                  <td colSpan={11} className="py-10 text-center text-sm text-muted-foreground">
                     No applications match this filter.
                   </td>
                 </tr>

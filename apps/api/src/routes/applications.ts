@@ -36,7 +36,8 @@ const createSchema = z.object({
   serviceType: z.nativeEnum(ServiceType).optional(),
   requestedAmount: z.coerce.number().int().min(0).max(1_000_000).optional(),
   institutionClaim: z.string().trim().max(160).optional(),
-  /** Consent scopes the citizen granted on the submission form. */
+  /** Consent scopes the citizen granted on the submission form. Scopes that do
+   *  not apply to the chosen service are simply ignored. */
   consents: z.array(z.enum(['IDENTITY', 'INCOME', 'EDUCATION'])).default([]),
 });
 

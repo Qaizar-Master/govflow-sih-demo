@@ -1,6 +1,6 @@
 import {
   FINDING_KIND,
-  SCHOLARSHIP_POLICY,
+  SCHOLARSHIP_SERVICE,
   Severity,
   ValidationStatus,
   type EducationFacts,
@@ -8,6 +8,7 @@ import {
   type IdentityFacts,
   type IncomeFacts,
   type LegacyBeneficiaryFacts,
+  type ServicePolicy,
   type ValidationFinding,
   type ValidationReport,
 } from '@govflow/contracts';
@@ -24,6 +25,22 @@ export interface ValidationSubject {
   }[];
   /** Departments whose lookup failed, so gaps are explained rather than blamed. */
   unavailableSources?: string[];
+  /**
+   * Eligibility policy for the service being applied for. Defaults to the
+   * scholarship scheme so existing callers and tests keep their behaviour.
+   */
+  policy?: ServicePolicy;
+  /** Which departments this service actually consults - a service that never
+   *  asks Education must not be told Education data is "missing". */
+  expectedSources?: string[];
+}
+
+/** Age in whole years, from an ISO date. */
+function ageYears(isoDate: string | undefined): number | null {
+  if (!isoDate) return null;
+  const dob = new Date(`${isoDate}T00:00:00Z`);
+  if (Number.isNaN(dob.getTime())) return null;
+  return Math.floor((Date.now() - dob.getTime()) / (365.25 * 24 * 3_600_000));
 }
 
 /** Numeric suffix of an identifier, used for the cross-department crosswalk. */
@@ -48,6 +65,10 @@ function pct(a: number, b: number): number {
 export function runRuleBasedValidation(subject: ValidationSubject): ValidationReport {
   const findings: ValidationFinding[] = [];
   const { identity, income, education, legacy, documents } = subject;
+  const policy = subject.policy ?? SCHOLARSHIP_SERVICE.policy;
+  const expected = new Set(
+    subject.expectedSources ?? ['IDENTITY', 'INCOME', 'EDUCATION'],
+  );
 
   // ---- 1. Cross-source name agreement ------------------------------------
   const namedSources: { source: string; name: string }[] = [];
@@ -146,6 +167,8 @@ export function runRuleBasedValidation(subject: ValidationSubject): ValidationRe
     { key: 'EDUCATION', present: Boolean(education), label: 'Education Department' },
   ];
   for (const source of requiredSources) {
+    // Only complain about a source this service actually consults.
+    if (!expected.has(source.key)) continue;
     if (source.present) continue;
     findings.push({
       kind: FINDING_KIND.MISSING_FIELD,
@@ -170,7 +193,7 @@ export function runRuleBasedValidation(subject: ValidationSubject): ValidationRe
   }
 
   // ---- 5. Required documents ---------------------------------------------
-  for (const required of SCHOLARSHIP_POLICY.requiredDocuments) {
+  for (const required of policy.requiredDocuments) {
     const present = documents.some((d) => d.documentType === required);
     if (present) continue;
     findings.push({
@@ -243,26 +266,71 @@ export function runRuleBasedValidation(subject: ValidationSubject): ValidationRe
   }
 
   // ---- 8. Advisory eligibility hints (NOT a decision) --------------------
-  if (income?.annualIncome != null && income.annualIncome > SCHOLARSHIP_POLICY.maxAnnualIncome) {
+  // Every hint below is driven by the service's own policy, so the same engine
+  // serves a means-tested benefit and a plain certificate issuance.
+  if (
+    policy.maxAnnualIncome !== null &&
+    income?.annualIncome != null &&
+    income.annualIncome > policy.maxAnnualIncome
+  ) {
     findings.push({
       kind: FINDING_KIND.ELIGIBILITY_HINT,
       severity: Severity.HIGH,
       field: 'annualIncome',
-      message: `Declared income of ${income.annualIncome.toLocaleString('en-IN')} exceeds the scheme ceiling of ${SCHOLARSHIP_POLICY.maxAnnualIncome.toLocaleString('en-IN')}. Officer confirmation required.`,
-      observed: { INCOME: income.annualIncome, CEILING: SCHOLARSHIP_POLICY.maxAnnualIncome },
+      message: `Declared income of ${income.annualIncome.toLocaleString('en-IN')} exceeds the scheme ceiling of ${policy.maxAnnualIncome.toLocaleString('en-IN')}. Officer confirmation required.`,
+      observed: { INCOME: income.annualIncome, CEILING: policy.maxAnnualIncome },
       confidence: 1,
     });
   }
   if (
+    policy.requiredEducationStatus.length > 0 &&
     education?.educationStatus &&
-    !SCHOLARSHIP_POLICY.requiredEducationStatus.includes(education.educationStatus as never)
+    !policy.requiredEducationStatus.includes(education.educationStatus)
   ) {
     findings.push({
       kind: FINDING_KIND.ELIGIBILITY_HINT,
       severity: Severity.HIGH,
       field: 'educationStatus',
-      message: `Enrolment status is "${education.educationStatus}"; the scheme requires an active enrolment. Officer confirmation required.`,
+      message: `Enrolment status is "${education.educationStatus}"; the scheme requires ${policy.requiredEducationStatus.join(' or ')}. Officer confirmation required.`,
       observed: { EDUCATION: education.educationStatus },
+      confidence: 1,
+    });
+  }
+
+  const age = ageYears(identity?.dateOfBirth);
+  if (age !== null && policy.minAgeYears !== null && age < policy.minAgeYears) {
+    findings.push({
+      kind: FINDING_KIND.ELIGIBILITY_HINT,
+      severity: Severity.MEDIUM,
+      field: 'dateOfBirth',
+      message: `Applicant is ${age}; this service requires a minimum age of ${policy.minAgeYears}. Officer confirmation required.`,
+      observed: { IDENTITY: age, MINIMUM: policy.minAgeYears },
+      confidence: 1,
+    });
+  }
+  if (age !== null && policy.maxAgeYears !== null && age > policy.maxAgeYears) {
+    findings.push({
+      kind: FINDING_KIND.ELIGIBILITY_HINT,
+      severity: Severity.MEDIUM,
+      field: 'dateOfBirth',
+      message: `Applicant is ${age}; this service has an upper age limit of ${policy.maxAgeYears}. Officer confirmation required.`,
+      observed: { IDENTITY: age, MAXIMUM: policy.maxAgeYears },
+      confidence: 1,
+    });
+  }
+
+  // Duplicate-benefit check. Only meaningful for services that disburse
+  // something, which is why it is a policy flag rather than a global rule.
+  if (policy.flagExistingBeneficiary && legacy?.beneficiaryNumber) {
+    findings.push({
+      kind: FINDING_KIND.ELIGIBILITY_HINT,
+      severity: Severity.HIGH,
+      field: 'beneficiaryNumber',
+      message: `Applicant already appears in the legacy beneficiary register as ${legacy.beneficiaryNumber} (status ${legacy.verificationStatus}). Confirm this is not a duplicate claim.`,
+      observed: {
+        LEGACY: legacy.beneficiaryNumber,
+        STATUS: legacy.verificationStatus,
+      },
       confidence: 1,
     });
   }

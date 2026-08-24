@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import {
   DEPARTMENTS,
-  SCHOLARSHIP_POLICY,
   getDepartmentDefinition,
   type DepartmentDefinition,
 } from '@govflow/contracts';
@@ -16,11 +15,19 @@ import { RestConnector } from './rest-connector.js';
 
 const numeric = z.union([z.number(), z.string()]);
 
-/** Age in whole years, from an ISO date. */
-function ageYears(isoDate: string): number | null {
+/**
+ * Connector quality checks report on the DATA, never on scheme eligibility.
+ *
+ * A connector serves every service, so it cannot know whether an age or an
+ * income qualifies for anything - that is per-service policy, applied later by
+ * the validation engine. Mixing the two here would mean the Income connector
+ * had an opinion about scholarships.
+ */
+function isPlausibleDateOfBirth(isoDate: string): boolean {
   const dob = new Date(`${isoDate}T00:00:00Z`);
-  if (Number.isNaN(dob.getTime())) return null;
-  return Math.floor((Date.now() - dob.getTime()) / (365.25 * 24 * 3_600_000));
+  if (Number.isNaN(dob.getTime())) return false;
+  const years = (Date.now() - dob.getTime()) / (365.25 * 24 * 3_600_000);
+  return years >= 0 && years <= 120;
 }
 
 // ---------------------------------------------------------------------------
@@ -41,13 +48,8 @@ export class IdentityConnector extends RestConnector {
   protected override qualityCheck(record: NormalizedRecord): string[] {
     const warnings: string[] = [];
     if (record.dataType !== DataType.IDENTITY) return warnings;
-    const age = ageYears(record.facts.dateOfBirth);
-    if (age === null) {
-      warnings.push('Date of birth could not be interpreted as a calendar date.');
-    } else if (age < SCHOLARSHIP_POLICY.minAgeYears || age > SCHOLARSHIP_POLICY.maxAgeYears) {
-      warnings.push(
-        `Applicant age (${age}) falls outside the scheme range ${SCHOLARSHIP_POLICY.minAgeYears}-${SCHOLARSHIP_POLICY.maxAgeYears}.`,
-      );
+    if (!isPlausibleDateOfBirth(record.facts.dateOfBirth)) {
+      warnings.push('Date of birth is missing, unparseable or implausible.');
     }
     if (!record.facts.identityVerified) {
       warnings.push('Identity Registry did not mark this record as verified.');
@@ -109,9 +111,11 @@ export class EducationConnector extends RestConnector {
   protected override qualityCheck(record: NormalizedRecord): string[] {
     const warnings: string[] = [];
     if (record.dataType !== DataType.EDUCATION) return warnings;
-    if (!SCHOLARSHIP_POLICY.requiredEducationStatus.includes(record.facts.educationStatus as never)) {
+    // Report the fact, not a verdict: whether INACTIVE disqualifies the
+    // applicant depends on the service, and is decided by the policy engine.
+    if (record.facts.educationStatus !== 'ACTIVE') {
       warnings.push(
-        `Enrolment status is "${record.facts.educationStatus}" - the scheme expects ${SCHOLARSHIP_POLICY.requiredEducationStatus.join(' or ')}.`,
+        `Education Department reports enrolment status "${record.facts.educationStatus}".`,
       );
     }
     return warnings;

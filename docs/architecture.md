@@ -98,7 +98,7 @@ flowchart TB
     subgraph contracts["packages/contracts"]
         cdm["Common data model (Zod)"]
         maps["Field mappings"]
-        wfdef["Workflow definition"]
+        wfdef["Service catalogue<br/>3 services · steps · policy"]
         envcfg["Environment config"]
     end
 
@@ -149,10 +149,40 @@ A worked example — three registries, three dialects, one result:
 | — | `annualIncome: "1,95,000"` | — | `annualIncome: 195000` |
 | — | — | `enrollment_status: "active"` | `educationStatus: "ACTIVE"` |
 
+## 5a. One engine, many services
+
+Three services run on this layer. They differ only in which steps they select, which
+consent scopes they declare and which policy they carry - never in machinery.
+
+```mermaid
+flowchart TB
+    vocab["<b>Shared step vocabulary</b><br/>Consent · Identity · Income · Education · Legacy cross-check<br/>Documents · Data quality · Officer review · Final decision"]
+
+    s1["<b>Merit-cum-Means Scholarship</b><br/>9 steps · 5-day target<br/>ceiling ₹2,50,000<br/>active enrolment required"]
+    s2["<b>Income Certificate</b><br/>7 steps · 3-day target<br/>issuance, not a benefit<br/>no means test"]
+    s3["<b>Ration Card / PDS</b><br/>8 steps · 7-day target<br/>ceiling ₹1,80,000<br/>duplicate-benefit check"]
+
+    conn["<b>The same four connectors</b><br/>Identity Registry · Income Department · Education Department · Legacy CSV export"]
+
+    vocab ==> s1
+    vocab ==> s2
+    vocab ==> s3
+    s1 ==> conn
+    s2 ==> conn
+    s3 ==> conn
+```
+
+The constraint in the second arrow is enforced, not asserted: a test fails if any service
+introduces a department outside the registry. Adding a fourth service is a configuration
+entry - no change to the engine, the API or the UI.
+
 ## 6. Asynchronous execution
 
 `POST /api/applications` returns in milliseconds with `PROCESSING`. It does **not** call
 any department on the request thread — a slow registry must never become a slow portal.
+
+The sequence below follows a scholarship application; the other services walk their own
+step list through the identical machinery.
 
 ```mermaid
 sequenceDiagram

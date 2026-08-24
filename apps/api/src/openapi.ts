@@ -116,12 +116,14 @@ enforced in Express middleware, never in the browser.`,
         responses: { 200: okResponse('Department registry') },
       },
     },
-    '/api/meta/workflow': {
+    '/api/meta/services': {
       get: {
         tags: ['Meta'],
-        summary: 'The scholarship workflow definition, SLA target and scheme policy',
+        summary: 'The service catalogue: workflow, policy and consent scopes per service',
+        description:
+          'Three services share one workflow engine and one set of connectors. The difference between them is entirely this configuration.',
         security: [],
-        responses: { 200: okResponse('Workflow definition') },
+        responses: { 200: okResponse('Service catalogue') },
       },
     },
     '/api/auth/register': {
@@ -190,7 +192,11 @@ enforced in Express middleware, never in the browser.`,
         requestBody: jsonBody({
           type: 'object',
           properties: {
-            serviceType: { type: 'string', enum: ['SCHOLARSHIP'] },
+            serviceType: {
+              type: 'string',
+              enum: ['SCHOLARSHIP', 'INCOME_CERTIFICATE', 'RATION_CARD'],
+              default: 'SCHOLARSHIP',
+            },
             requestedAmount: { type: 'integer', example: 50000 },
             institutionClaim: { type: 'string' },
             consents: {

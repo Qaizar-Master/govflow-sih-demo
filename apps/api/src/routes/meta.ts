@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { DEPARTMENTS, SCHOLARSHIP_POLICY, SCHOLARSHIP_WORKFLOW, env } from '@govflow/contracts';
+import { DEPARTMENTS, SERVICES, env } from '@govflow/contracts';
 import { prisma } from '@govflow/core';
 import { handler } from '../lib/async-handler.js';
 import { ok } from '../lib/respond.js';
@@ -56,12 +56,26 @@ metaRouter.get('/meta/departments', (_req, res) => {
   });
 });
 
-metaRouter.get('/meta/workflow', (_req, res) => {
+/**
+ * The service catalogue. Three services share one engine and one set of
+ * connectors - the difference between them is entirely this configuration.
+ */
+metaRouter.get('/meta/services', (_req, res) => {
   ok(res, {
-    definition: 'scholarship-v1',
-    slaTargetDays: env.SLA_TARGET_DAYS,
     maxAttempts: env.WORKFLOW_MAX_ATTEMPTS,
-    policy: SCHOLARSHIP_POLICY,
-    steps: SCHOLARSHIP_WORKFLOW,
+    services: SERVICES.map((service) => ({
+      serviceType: service.serviceType,
+      name: service.name,
+      summary: service.summary,
+      owningDepartment: service.owningDepartment,
+      slaTargetDays: service.slaTargetDays,
+      consentScopes: service.consentScopes,
+      policy: service.policy,
+      steps: service.steps,
+      // The headline: no service needs a connector of its own.
+      departmentsUsed: [
+        ...new Set(service.steps.map((s) => s.departmentCode).filter(Boolean)),
+      ],
+    })),
   });
 });

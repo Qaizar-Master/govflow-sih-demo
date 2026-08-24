@@ -15,7 +15,7 @@ import {
   DEPARTMENTS,
   DataType,
   REPO_ROOT,
-  SCHOLARSHIP_WORKFLOW,
+  getServiceDefinition,
   env,
   type IdentityFacts,
 } from '@govflow/contracts';
@@ -163,6 +163,8 @@ interface AppSpec {
   scenario: Scenario;
   submittedDaysAgo: number;
   requestedAmount: number;
+  /** Defaults to the scholarship scheme. */
+  serviceType?: 'SCHOLARSHIP' | 'INCOME_CERTIFICATE' | 'RATION_CARD';
 }
 
 const APP_SPECS: AppSpec[] = [
@@ -176,12 +178,45 @@ const APP_SPECS: AppSpec[] = [
   { citizenId: 'CIT-1007', scenario: 'REJECTED', submittedDaysAgo: 5, requestedAmount: 40000 },
   { citizenId: 'CIT-1010', scenario: 'AWAITING_CONSENT', submittedDaysAgo: 0, requestedAmount: 48000 },
   { citizenId: 'CIT-1008', scenario: 'IN_FLIGHT', submittedDaysAgo: 0, requestedAmount: 52000 },
+
+  // The same four connectors, two more services. Nothing was integrated twice.
+  {
+    citizenId: 'CIT-1006',
+    scenario: 'APPROVED_CLEAN',
+    submittedDaysAgo: 2,
+    requestedAmount: 0,
+    serviceType: 'INCOME_CERTIFICATE',
+  },
+  {
+    citizenId: 'CIT-1003',
+    scenario: 'UNDER_REVIEW_CLEAN',
+    submittedDaysAgo: 1,
+    requestedAmount: 0,
+    serviceType: 'INCOME_CERTIFICATE',
+  },
+  // Already in the legacy beneficiary register - a possible duplicate claim.
+  {
+    citizenId: 'CIT-1001',
+    scenario: 'MISMATCH',
+    submittedDaysAgo: 3,
+    requestedAmount: 0,
+    serviceType: 'RATION_CARD',
+  },
+  {
+    citizenId: 'CIT-1004',
+    scenario: 'UNDER_REVIEW_CLEAN',
+    submittedDaysAgo: 1,
+    requestedAmount: 0,
+    serviceType: 'RATION_CARD',
+  },
 ];
 
 /** Which steps have completed, and the resulting statuses, per scenario. */
-function planFor(scenario: Scenario) {
-  const all = SCHOLARSHIP_WORKFLOW.map((s) => s.stepType);
-  const automated = all.slice(0, 7); // CONSENT .. DATA_QUALITY_CHECK
+function planFor(scenario: Scenario, serviceType: string) {
+  const steps = getServiceDefinition(serviceType).steps;
+  const all = steps.map((s) => s.stepType);
+  // Everything up to and including the data-quality check runs automatically.
+  const automated = all.slice(0, all.indexOf('DATA_QUALITY_CHECK') + 1);
 
   switch (scenario) {
     case 'APPROVED_CLEAN':
@@ -194,7 +229,7 @@ function planFor(scenario: Scenario) {
       };
     case 'REJECTED':
       return {
-        completed: all.slice(0, 8),
+        completed: all.slice(0, all.length - 1),
         rejectedStep: 'FINAL_DECISION' as const,
         applicationStatus: 'REJECTED' as const,
         workflowStatus: 'COMPLETED' as const,
@@ -254,6 +289,13 @@ function planFor(scenario: Scenario) {
       };
   }
 }
+
+/** Application numbers carry the service, the way real dockets do. */
+const APPLICATION_PREFIX: Record<string, string> = {
+  SCHOLARSHIP: 'GF-SCH',
+  INCOME_CERTIFICATE: 'GF-INC',
+  RATION_CARD: 'GF-PDS',
+};
 
 const daysAgo = (n: number) => new Date(Date.now() - n * 24 * 3_600_000);
 const hoursAgo = (n: number) => new Date(Date.now() - n * 3_600_000);
@@ -387,7 +429,9 @@ async function main() {
     const citizen = citizenByExternalId.get(spec.citizenId);
     if (!citizen) continue;
 
-    const plan = planFor(spec.scenario);
+    const serviceType = spec.serviceType ?? 'SCHOLARSHIP';
+    const service = getServiceDefinition(serviceType);
+    const plan = planFor(spec.scenario, serviceType);
     const completed = new Set<string>(plan.completed as readonly string[]);
     const submittedAt = daysAgo(spec.submittedDaysAgo);
     const identity = identityFacts(spec.citizenId);
@@ -400,14 +444,14 @@ async function main() {
 
     const application = await prisma.application.create({
       data: {
-        applicationNumber: `GF-SCH-2026-${String(seq).padStart(5, '0')}`,
+        applicationNumber: `${APPLICATION_PREFIX[serviceType]}-2026-${String(seq).padStart(5, '0')}`,
         citizenId: citizen.id,
-        serviceType: 'SCHOLARSHIP' as never,
+        serviceType: serviceType as never,
         status: plan.applicationStatus as never,
         currentStep: plan.currentStep as never,
         requestedAmount: spec.requestedAmount,
         institutionClaim: (education?.institution as string | undefined) ?? null,
-        slaTargetDays: env.SLA_TARGET_DAYS,
+        slaTargetDays: service.slaTargetDays,
         submittedAt,
         createdAt: submittedAt,
         decisionAt:
@@ -423,11 +467,10 @@ async function main() {
     });
 
     // Consents
-    const consentScopes = [
-      { code: 'IDENTITY', purpose: 'Verify identity, date of birth and district of residence.' },
-      { code: 'INCOME', purpose: 'Confirm declared annual family income against the income registry.' },
-      { code: 'EDUCATION', purpose: 'Confirm active enrolment and institution details.' },
-    ];
+    const consentScopes = service.consentScopes.map((scope) => ({
+      code: scope.departmentCode,
+      purpose: scope.purpose,
+    }));
     for (const scope of consentScopes) {
       const pending = 'pendingConsent' in plan && plan.pendingConsent && scope.code === 'EDUCATION';
       await prisma.consent.create({
@@ -456,7 +499,7 @@ async function main() {
       },
     });
 
-    for (const def of SCHOLARSHIP_WORKFLOW) {
+    for (const def of service.steps) {
       let status = 'PENDING';
       let errorMessage: string | null = null;
       let retryCount = 0;
@@ -695,7 +738,18 @@ async function main() {
 
     // Validation report + exceptions for the scenarios that need them
     const findings: Record<string, unknown>[] = [];
-    if (spec.scenario === 'MISMATCH') {
+    if (spec.scenario === 'MISMATCH' && serviceType === 'RATION_CARD') {
+      // The duplicate-benefit check: this household already holds a record in
+      // the legacy PDS register.
+      findings.push({
+        kind: 'ELIGIBILITY_HINT',
+        severity: 'HIGH',
+        field: 'beneficiaryNumber',
+        message: `Applicant already appears in the legacy beneficiary register as ${legacy?.beneficiaryNumber} (status ${legacy?.verificationStatus}). Confirm this is not a duplicate claim.`,
+        observed: { LEGACY: legacy?.beneficiaryNumber, STATUS: legacy?.verificationStatus },
+        confidence: 1,
+      });
+    } else if (spec.scenario === 'MISMATCH') {
       findings.push({
         kind: 'NAME_MISMATCH',
         severity: 'LOW',
