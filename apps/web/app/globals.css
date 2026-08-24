@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Institutional navy - the platform's single strong colour. */
+    --primary: 221 62% 26%;
+    --primary-foreground: 210 40% 98%;
+    --primary-muted: 221 45% 94%;
+
+    --secondary: 214 32% 94%;
+    --secondary-foreground: 222 47% 20%;
+
+    --muted: 214 32% 95%;
+    --muted-foreground: 215 16% 42%;
+
+    --accent: 199 89% 33%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 72% 42%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 62% 30%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 33 90% 40%;
+    --warning-foreground: 0 0% 100%;
+
+    --info: 210 78% 40%;
+    --info-foreground: 0 0% 100%;
+
+    --border: 214 25% 88%;
+    --input: 214 25% 88%;
+    --ring: 221 62% 36%;
+
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  /* Visible focus everywhere: this is a public-service interface. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer components {
+  /* The thin tricolour rule under the masthead. */
+  .gov-accent-bar {
+    background: linear-gradient(
+      to right,
+      #ff9933 0%,
+      #ff9933 33.33%,
+      #ffffff 33.33%,
+      #ffffff 66.66%,
+      #138808 66.66%,
+      #138808 100%
+    );
+  }
+
+  .stat-grid {
+    @apply grid gap-4 sm:grid-cols-2 lg:grid-cols-4;
+  }
+
+  .data-table {
+    @apply w-full text-sm;
+  }
+  .data-table thead th {
+    @apply border-b border-border bg-muted/60 px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground;
+  }
+  .data-table tbody td {
+    @apply border-b border-border/60 px-3 py-3 align-middle;
+  }
+  .data-table tbody tr:hover {
+    @apply bg-muted/40;
+  }
+}
+
+/* Wide tables and payloads scroll inside their own container, never the page. */
+.scroll-x {
+  @apply overflow-x-auto;
+}

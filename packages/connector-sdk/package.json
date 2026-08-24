@@ -1,0 +1,17 @@
+{
+  "name": "@govflow/connector-sdk",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@govflow/contracts": "*",
+    "axios": "^1.7.9",
+    "csv-parse": "^5.6.0",
+    "zod": "^3.24.1"
+  }
+}

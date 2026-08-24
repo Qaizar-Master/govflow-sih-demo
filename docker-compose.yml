@@ -1,0 +1,146 @@
+# GovFlow - full local stack.
+#   docker compose up --build
+# The api service applies the schema and seeds synthetic data on start, so a
+# clean machine reaches a demo-ready state with one command.
+
+name: govflow
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: govflow-postgres
+    environment:
+      POSTGRES_USER: govflow
+      POSTGRES_PASSWORD: govflow
+      POSTGRES_DB: govflow
+    ports:
+      - '5432:5432'
+    volumes:
+      - govflow-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U govflow -d govflow']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: govflow-redis
+    command: ['redis-server', '--appendonly', 'no']
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  mock-departments:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.node
+    container_name: govflow-mock-departments
+    command: ['npm', 'run', 'start', '-w', '@govflow/mock-departments']
+    environment:
+      NODE_ENV: production
+      MOCK_DEPARTMENTS_PORT: '5001'
+      IDENTITY_API_KEY: ${IDENTITY_API_KEY:-identity-demo-key}
+      INCOME_API_TOKEN: ${INCOME_API_TOKEN:-income-demo-bearer-token}
+      EDUCATION_BASIC_USER: ${EDUCATION_BASIC_USER:-education}
+      EDUCATION_BASIC_PASS: ${EDUCATION_BASIC_PASS:-education-demo-pass}
+    ports:
+      - '5001:5001'
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://localhost:5001/health || exit 1']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.node
+    container_name: govflow-api
+    entrypoint: ['/usr/local/bin/entrypoint-api.sh']
+    environment: &backend-env
+      NODE_ENV: production
+      DATABASE_URL: postgresql://govflow:govflow@postgres:5432/govflow?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-dev-only-change-me-govflow-jwt-secret}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-12h}
+      PORT: '4000'
+      API_BASE_URL: http://localhost:4000
+      FRONTEND_URL: http://localhost:3000
+      CORS_ORIGINS: http://localhost:3000
+      IDENTITY_API_URL: http://mock-departments:5001
+      INCOME_API_URL: http://mock-departments:5001
+      EDUCATION_API_URL: http://mock-departments:5001
+      IDENTITY_API_KEY: ${IDENTITY_API_KEY:-identity-demo-key}
+      INCOME_API_TOKEN: ${INCOME_API_TOKEN:-income-demo-bearer-token}
+      EDUCATION_BASIC_USER: ${EDUCATION_BASIC_USER:-education}
+      EDUCATION_BASIC_PASS: ${EDUCATION_BASIC_PASS:-education-demo-pass}
+      LEGACY_CSV_PATH: /app/data/legacy/beneficiaries.csv
+      UPLOAD_DIR: /app/data/uploads
+      CONNECTOR_TIMEOUT_MS: ${CONNECTOR_TIMEOUT_MS:-4000}
+      WORKFLOW_MAX_ATTEMPTS: ${WORKFLOW_MAX_ATTEMPTS:-3}
+      WORKFLOW_BACKOFF_MS: ${WORKFLOW_BACKOFF_MS:-1500}
+      SLA_TARGET_DAYS: ${SLA_TARGET_DAYS:-5}
+      # Optional. Leave unset to run entirely on rule-based validation.
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+    ports:
+      - '4000:4000'
+    volumes:
+      - govflow-uploads:/app/data/uploads
+      # Bind-mounted so the synthetic certificates the seed writes are visible on
+      # the host - the demo asks the presenter to upload them from data/documents.
+      - ./data/documents:/app/data/documents
+      - ./data/legacy:/app/data/legacy
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mock-departments:
+        condition: service_started
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://localhost:4000/api/health || exit 1']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.node
+    container_name: govflow-worker
+    command: ['npm', 'run', 'start', '-w', '@govflow/workflow-worker']
+    environment: *backend-env
+    volumes:
+      - govflow-uploads:/app/data/uploads
+      - ./data/documents:/app/data/documents
+      - ./data/legacy:/app/data/legacy
+    depends_on:
+      api:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+    container_name: govflow-web
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: '1'
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+    ports:
+      - '3000:3000'
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  govflow-postgres:
+  govflow-uploads:

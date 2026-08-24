@@ -1,0 +1,52 @@
+{
+  "name": "govflow",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GovFlow - Government Interoperability & Workflow Orchestration Platform (prototype)",
+  "license": "MIT",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "services/*",
+    "workers/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n mocks,api,worker,web -c magenta,cyan,yellow,green \"npm:dev:mocks\" \"npm:dev:api\" \"npm:dev:worker\" \"npm:dev:web\"",
+    "dev:mocks": "npm run dev -w @govflow/mock-departments",
+    "dev:api": "npm run dev -w @govflow/api",
+    "dev:worker": "npm run dev -w @govflow/workflow-worker",
+    "dev:web": "npm run dev -w @govflow/web",
+    "infra:up": "docker compose up -d postgres redis",
+    "infra:down": "docker compose down",
+    "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push --skip-generate",
+    "prisma:studio": "prisma studio",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:reset": "prisma db push --force-reset --skip-generate && npm run db:seed",
+    "typecheck": "tsc -p tsconfig.json && npm run typecheck -w @govflow/web",
+    "lint": "eslint . --ext .ts,.tsx --max-warnings 0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "npm run build -w @govflow/web",
+    "setup": "npm install && npm run prisma:generate && npm run infra:up && npm run prisma:push && npm run db:seed"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/supertest": "^6.0.2",
+    "@typescript-eslint/eslint-plugin": "^8.18.1",
+    "@typescript-eslint/parser": "^8.18.1",
+    "concurrently": "^9.1.0",
+    "eslint": "^8.57.1",
+    "prisma": "^6.1.0",
+    "supertest": "^7.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.1.0"
+  }
+}

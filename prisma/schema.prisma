@@ -1,0 +1,484 @@
+// GovFlow - Government Interoperability & Workflow Orchestration Platform
+// Prototype schema. All data is synthetic.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===========================================================================
+// Enums (mirrored in packages/contracts/src/enums.ts)
+// ===========================================================================
+
+enum Role {
+  CITIZEN
+  OFFICER
+  ADMIN
+}
+
+enum ServiceType {
+  SCHOLARSHIP
+}
+
+enum ApplicationStatus {
+  DRAFT
+  SUBMITTED
+  PROCESSING
+  REQUIRES_REVIEW
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum WorkflowStatus {
+  PENDING
+  RUNNING
+  WAITING_FOR_OFFICER
+  COMPLETED
+  FAILED
+  SUSPENDED
+}
+
+enum StepStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  RETRYING
+  REQUIRES_REVIEW
+  REJECTED
+  SKIPPED
+}
+
+enum StepType {
+  CONSENT
+  IDENTITY_VERIFICATION
+  INCOME_VERIFICATION
+  EDUCATION_VERIFICATION
+  LEGACY_CROSS_CHECK
+  DOCUMENT_VALIDATION
+  DATA_QUALITY_CHECK
+  OFFICER_REVIEW
+  FINAL_DECISION
+}
+
+enum ConsentStatus {
+  PENDING
+  GRANTED
+  DENIED
+  REVOKED
+  EXPIRED
+}
+
+enum DepartmentType {
+  IDENTITY
+  INCOME
+  EDUCATION
+  LEGACY
+}
+
+enum ConnectorType {
+  REST_JSON
+  CSV_FILE
+}
+
+enum DepartmentStatus {
+  ONLINE
+  DEGRADED
+  OFFLINE
+}
+
+enum DataType {
+  IDENTITY
+  INCOME
+  EDUCATION
+  LEGACY_BENEFICIARY
+}
+
+enum ExceptionType {
+  CONNECTOR_FAILURE
+  SCHEMA_ERROR
+  VALIDATION_FAILURE
+  DATA_MISMATCH
+  MISSING_DOCUMENT
+  SLA_BREACH
+  CONSENT_MISSING
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ExceptionStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+  IGNORED
+}
+
+enum DocumentType {
+  IDENTITY_PROOF
+  INCOME_CERTIFICATE
+  EDUCATION_CERTIFICATE
+  OTHER
+}
+
+enum ExtractionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum ValidationStatus {
+  PENDING
+  PASSED
+  WARNING
+  FAILED
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+enum RequestStatus {
+  SUCCESS
+  FAILURE
+}
+
+// ===========================================================================
+// Identity & organisation
+// ===========================================================================
+
+model User {
+  id           String  @id @default(cuid())
+  name         String
+  email        String  @unique
+  passwordHash String
+  role         Role    @default(CITIZEN)
+  departmentId String?
+  /// Set for CITIZEN accounts: links the login to the citizen record.
+  citizenId    String? @unique
+
+  department Department? @relation(fields: [departmentId], references: [id])
+  citizen    Citizen?    @relation(fields: [citizenId], references: [id])
+
+  auditLogs            AuditLog[]
+  notifications        Notification[]
+  decidedApplications  Application[]  @relation("ApplicationDecider")
+  resolvedExceptions   Exception[]    @relation("ExceptionResolver")
+  reviewNotes          ReviewNote[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([role])
+  @@index([departmentId])
+}
+
+model Department {
+  id            String           @id @default(cuid())
+  code          String           @unique
+  name          String
+  type          DepartmentType
+  connectorType ConnectorType
+  status        DepartmentStatus @default(ONLINE)
+  description   String
+  endpoint      String?
+  /// Non-null while an admin has this department in a simulated outage.
+  simulatedFailureMode String?
+  blocking      Boolean          @default(true)
+  lastCheckedAt DateTime?
+  lastLatencyMs Int?
+
+  users        User[]
+  connectorLogs ConnectorLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+}
+
+model Citizen {
+  id          String   @id @default(cuid())
+  /// Canonical GovFlow identifier, e.g. "CIT-1001".
+  externalId  String   @unique
+  name        String
+  dateOfBirth DateTime
+  district    String
+  email       String?
+  phone       String?
+
+  user             User?
+  applications     Application[]
+  consents         Consent[]
+  normalizedRecords NormalizedRecord[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([district])
+}
+
+// ===========================================================================
+// Applications & workflow
+// ===========================================================================
+
+model Application {
+  id                String            @id @default(cuid())
+  applicationNumber String            @unique
+  citizenId         String
+  serviceType       ServiceType       @default(SCHOLARSHIP)
+  status            ApplicationStatus @default(SUBMITTED)
+  currentStep       StepType          @default(CONSENT)
+  requestedAmount   Int?
+  institutionClaim  String?
+  slaTargetDays     Float             @default(5)
+  submittedAt       DateTime          @default(now())
+  decisionAt        DateTime?
+  decidedById       String?
+  decisionNotes     String?
+  /// Latest advisory validation report (AI or rule-based).
+  validationSummary Json?
+
+  citizen   Citizen @relation(fields: [citizenId], references: [id], onDelete: Cascade)
+  decidedBy User?   @relation("ApplicationDecider", fields: [decidedById], references: [id])
+
+  workflow          WorkflowInstance?
+  consents          Consent[]
+  documents         Document[]
+  exceptions        Exception[]
+  notifications     Notification[]
+  normalizedRecords NormalizedRecord[]
+  connectorLogs     ConnectorLog[]
+  reviewNotes       ReviewNote[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([citizenId])
+  @@index([status])
+  @@index([submittedAt])
+}
+
+model WorkflowInstance {
+  id             String         @id @default(cuid())
+  applicationId  String         @unique
+  definitionName String         @default("scholarship-v1")
+  status         WorkflowStatus @default(PENDING)
+  currentStep    StepType       @default(CONSENT)
+  startedAt      DateTime       @default(now())
+  completedAt    DateTime?
+
+  application Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  steps       WorkflowStep[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+model WorkflowStep {
+  id                 String     @id @default(cuid())
+  workflowInstanceId String
+  stepType           StepType
+  order              Int
+  label              String
+  /// Department code when the step calls an external system.
+  department         String?
+  status             StepStatus @default(PENDING)
+  retryCount         Int        @default(0)
+  maxAttempts        Int        @default(3)
+  startedAt          DateTime?
+  completedAt        DateTime?
+  errorMessage       String?
+  /// Step result payload (normalised facts, validation report, decision, ...).
+  output             Json?
+
+  workflowInstance WorkflowInstance @relation(fields: [workflowInstanceId], references: [id], onDelete: Cascade)
+  exceptions       Exception[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workflowInstanceId, stepType])
+  @@index([status])
+}
+
+model Consent {
+  id                   String        @id @default(cuid())
+  applicationId        String
+  citizenId            String
+  /// Department whose data is being requested.
+  departmentCode       String
+  requestingDepartment String        @default("GOVFLOW_SCHOLARSHIP_UNIT")
+  purpose              String
+  status               ConsentStatus @default(PENDING)
+  grantedAt            DateTime?
+  revokedAt            DateTime?
+  expiresAt            DateTime?
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  citizen     Citizen     @relation(fields: [citizenId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([applicationId, departmentCode])
+  @@index([status])
+}
+
+// ===========================================================================
+// Interoperability records
+// ===========================================================================
+
+/// A department payload after schema validation, mapping and normalisation.
+/// Raw department payloads are deliberately NOT persisted in full.
+model NormalizedRecord {
+  id                String           @id @default(cuid())
+  applicationId     String?
+  citizenId         String
+  sourceSystem      String
+  sourceRecordId    String
+  dataType          DataType
+  normalizedPayload Json
+  validationStatus  ValidationStatus @default(PASSED)
+  qualityWarnings   String[]
+  mappingName       String
+  receivedAt        DateTime         @default(now())
+
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  citizen     Citizen      @relation(fields: [citizenId], references: [id], onDelete: Cascade)
+
+  @@index([citizenId, dataType])
+  @@index([applicationId])
+  @@index([sourceSystem])
+}
+
+model ConnectorLog {
+  id            String        @id @default(cuid())
+  connector     String
+  departmentId  String?
+  applicationId String?
+  endpoint      String
+  method        String        @default("GET")
+  requestStatus RequestStatus
+  httpStatus    Int?
+  durationMs    Int
+  errorKind     String?
+  message       String?
+  createdAt     DateTime      @default(now())
+
+  department  Department?  @relation(fields: [departmentId], references: [id])
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([connector, createdAt])
+  @@index([requestStatus])
+  @@index([createdAt])
+}
+
+model Exception {
+  id              String          @id @default(cuid())
+  applicationId   String?
+  workflowStepId  String?
+  type            ExceptionType
+  severity        Severity        @default(MEDIUM)
+  message         String
+  details         Json?
+  status          ExceptionStatus @default(OPEN)
+  retryCount      Int             @default(0)
+  resolvedAt      DateTime?
+  resolvedById    String?
+  resolutionNotes String?
+
+  application  Application?  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  workflowStep WorkflowStep? @relation(fields: [workflowStepId], references: [id], onDelete: Cascade)
+  resolvedBy   User?         @relation("ExceptionResolver", fields: [resolvedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, severity])
+  @@index([applicationId])
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  userId       String?
+  actorRole    Role?
+  action       String
+  resourceType String
+  resourceId   String
+  metadata     Json?
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([action, createdAt])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+}
+
+model Document {
+  id               String           @id @default(cuid())
+  applicationId    String
+  documentType     DocumentType
+  fileName         String
+  storagePath      String
+  mimeType         String
+  sizeBytes        Int
+  extractionStatus ExtractionStatus @default(PENDING)
+  /// Structured fields extracted by OCR + AI (or the rule-based fallback).
+  extractedData    Json?
+  validationStatus ValidationStatus @default(PENDING)
+  validationNotes  String?
+  extractionEngine String?
+  uploadedAt       DateTime         @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, documentType])
+}
+
+model Notification {
+  id            String           @id @default(cuid())
+  userId        String
+  applicationId String?
+  type          NotificationType @default(INFO)
+  title         String
+  message       String
+  readAt        DateTime?
+  createdAt     DateTime         @default(now())
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([createdAt])
+}
+
+model ReviewNote {
+  id            String   @id @default(cuid())
+  applicationId String
+  authorId      String
+  note          String
+  createdAt     DateTime @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  author      User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+}

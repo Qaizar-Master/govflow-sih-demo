@@ -1,0 +1,16 @@
+{
+  "name": "@govflow/workflow-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@govflow/connector-sdk": "*",
+    "@govflow/contracts": "*",
+    "@govflow/core": "*",
+    "bullmq": "^5.34.6"
+  }
+}
