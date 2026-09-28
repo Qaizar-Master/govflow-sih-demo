@@ -276,6 +276,24 @@ export function getServiceDefinition(serviceType: string): ServiceDefinition {
   return found;
 }
 
+/**
+ * The services an officer in `departmentCode` is competent to decide.
+ *
+ * An officer works for one department, and a department owns the outcome of
+ * some services and not others. A Revenue officer has no standing to approve a
+ * scholarship, so the queue, the metrics and every decision endpoint are scoped
+ * through this function rather than showing every application to everyone.
+ */
+export function serviceTypesOwnedBy(departmentCode: string): ServiceType[] {
+  const code = departmentCode.toUpperCase();
+  return SERVICES.filter((s) => s.owningDepartment === code).map((s) => s.serviceType);
+}
+
+/** Department codes that own at least one service - i.e. can have review officers. */
+export function owningDepartmentCodes(): string[] {
+  return [...new Set(SERVICES.map((s) => s.owningDepartment))];
+}
+
 export const workflowConfig = {
   maxAttempts: env.WORKFLOW_MAX_ATTEMPTS,
   backoffMs: env.WORKFLOW_BACKOFF_MS,

@@ -148,6 +148,16 @@ enum ValidationStatus {
   FAILED
 }
 
+/// How a citizen's departmental identifier came to be known.
+enum IdentifierLinkSource {
+  /// Synthetic dataset. Demo only - carries no assurance.
+  SEED
+  /// Returned by the identity provider when the citizen authenticated.
+  SSO_ASSERTION
+  /// Entered by a departmental officer against a physical document.
+  OFFICER_ASSERTED
+}
+
 enum NotificationType {
   INFO
   SUCCESS
@@ -223,11 +233,17 @@ model Citizen {
   district    String
   email       String?
   phone       String?
+  /// Pairwise subject from the identity provider. Opaque: never a registry id.
+  ssoSubject  String?  @unique
+  /// When the identity provider last asserted this person. Null means the
+  /// binding rests on self-declaration, which is worth much less.
+  identityAssertedAt DateTime?
 
   user             User?
   applications     Application[]
   consents         Consent[]
   normalizedRecords NormalizedRecord[]
+  identifierLinks  IdentifierLink[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -369,6 +385,35 @@ model NormalizedRecord {
   @@index([citizenId, dataType])
   @@index([applicationId])
   @@index([sourceSystem])
+}
+
+/// Crosswalk between GovFlow's canonical citizen id and the identifier each
+/// department uses for the same person.
+///
+/// This exists because departmental keyspaces are genuinely independent: the
+/// Identity Registry's CIT-1001, Revenue's INC-1001 and the university's
+/// STU-1001 are three unrelated sequences that happen to be aligned in the
+/// synthetic dataset. Deriving one from another would be a demo trick that
+/// breaks against any real registry, so the mapping is stored, attributed to
+/// a source, and required before any departmental lookup may run.
+model IdentifierLink {
+  id                 String               @id @default(cuid())
+  citizenId          String
+  /// Department code, e.g. "INCOME".
+  departmentCode     String
+  /// The identifier that department uses, e.g. "INC-1001".
+  externalIdentifier String
+  source             IdentifierLinkSource @default(SEED)
+  /// When the link was last confirmed against its source.
+  verifiedAt         DateTime?
+
+  citizen Citizen @relation(fields: [citizenId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([citizenId, departmentCode])
+  @@index([departmentCode, externalIdentifier])
 }
 
 model ConnectorLog {

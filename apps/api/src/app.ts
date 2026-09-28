@@ -13,6 +13,7 @@ import { authRouter } from './routes/auth.js';
 import { metaRouter } from './routes/meta.js';
 import { notificationsRouter } from './routes/notifications.js';
 import { officerRouter } from './routes/officer.js';
+import { ssoRouter } from './routes/sso.js';
 
 const log = createLogger('api');
 
@@ -62,6 +63,8 @@ export function createApp() {
 
   // ---- Routes ------------------------------------------------------------
   app.use('/api', metaRouter);
+  // Mounted before authRouter so the SSO paths are matched first.
+  app.use('/api/auth/sso', ssoRouter);
   app.use('/api/auth', authRouter);
   app.use('/api/applications', applicationsRouter);
   app.use('/api/notifications', notificationsRouter);

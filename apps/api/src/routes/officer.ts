@@ -13,7 +13,12 @@ import {
 import { ApiError } from '../lib/api-error.js';
 import { handler } from '../lib/async-handler.js';
 import { ok } from '../lib/respond.js';
-import { authenticate, requireOfficer } from '../middleware/auth.js';
+import {
+  assertOfficerScope,
+  authenticate,
+  officerServiceScope,
+  requireOfficer,
+} from '../middleware/auth.js';
 import { validateBody, validateQuery } from '../middleware/validate.js';
 
 export const officerRouter = Router();
@@ -28,7 +33,9 @@ const queueQuerySchema = z.object({
 
 officerRouter.get(
   '/metrics',
-  handler(async (_req, res) => ok(res, await officerMetrics())),
+  handler(async (req, res) =>
+    ok(res, await officerMetrics((await officerServiceScope(req)) ?? undefined)),
+  ),
 );
 
 officerRouter.get(
@@ -51,10 +58,14 @@ officerRouter.get(
       (s) => s !== ApplicationStatus.AWAITING_CITIZEN_ACTION,
     ) as ApplicationStatus[];
 
+    // Scoped to the services this officer's department owns.
+    const serviceTypes = await officerServiceScope(req);
+
     return ok(
       res,
       await listApplications({
         statuses: statuses?.length ? statuses : OFFICER_VISIBLE,
+        ...(serviceTypes ? { serviceTypes } : {}),
         search: query.search,
         page: query.page,
         pageSize: query.pageSize,
@@ -66,6 +77,7 @@ officerRouter.get(
 officerRouter.get(
   '/applications/:id',
   handler(async (req, res) => {
+    await assertOfficerScope(req, req.params.id!);
     const detail = await getApplicationDetail(req.params.id!);
     if (!detail) throw ApiError.notFound('Application not found');
     return ok(res, detail);
@@ -81,6 +93,7 @@ officerRouter.post(
   validateBody(decisionSchema),
   handler(async (req, res) => {
     const body = req.body as z.infer<typeof decisionSchema>;
+    await assertOfficerScope(req, req.params.id!);
     try {
       const updated = await recordOfficerDecision({
         applicationId: req.params.id!,
@@ -105,6 +118,7 @@ officerRouter.post(
   validateBody(decisionSchema),
   handler(async (req, res) => {
     const body = req.body as z.infer<typeof decisionSchema>;
+    await assertOfficerScope(req, req.params.id!);
     try {
       const updated = await recordOfficerDecision({
         applicationId: req.params.id!,
@@ -134,6 +148,7 @@ function toDecisionError(error: unknown): ApiError {
 officerRouter.post(
   '/applications/:id/resume',
   handler(async (req, res) => {
+    await assertOfficerScope(req, req.params.id!);
     const result = await resumeWorkflow(req.params.id!, { userId: req.user!.id });
     return ok(res, {
       resumedStep: result.resumedStep,
@@ -171,9 +186,15 @@ officerRouter.get(
       .map((s) => s.trim().toUpperCase())
       .filter((s) => validSeverity.has(s));
 
+    // Exceptions follow their application's scope. Platform-level exceptions
+    // (no application attached) are an admin concern, so a scoped officer does
+    // not see them at all rather than seeing them without context.
+    const serviceTypes = await officerServiceScope(req);
+
     const where = {
       ...(statuses.length ? { status: { in: statuses as never } } : {}),
       ...(severities?.length ? { severity: { in: severities as never } } : {}),
+      ...(serviceTypes ? { application: { serviceType: { in: serviceTypes as never } } } : {}),
     };
 
     const [rows, total] = await Promise.all([
@@ -241,6 +262,12 @@ officerRouter.post(
     const body = req.body as z.infer<typeof resolveSchema>;
     const existing = await prisma.exception.findUnique({ where: { id: req.params.id! } });
     if (!existing) throw ApiError.notFound('Exception not found');
+    if (existing.applicationId) {
+      await assertOfficerScope(req, existing.applicationId);
+    } else if ((await officerServiceScope(req)) !== null) {
+      // Platform-level exception, and this officer is department-scoped.
+      throw ApiError.notFound('Exception not found');
+    }
 
     const updated = await resolveException(
       existing.id,

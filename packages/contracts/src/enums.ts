@@ -161,6 +161,17 @@ export const ValidationStatus = {
 } as const;
 export type ValidationStatus = (typeof ValidationStatus)[keyof typeof ValidationStatus];
 
+export const IdentifierLinkSource = {
+  /** Synthetic dataset. Demo only - carries no assurance. */
+  SEED: 'SEED',
+  /** Returned by the identity provider when the citizen authenticated. */
+  SSO_ASSERTION: 'SSO_ASSERTION',
+  /** Entered by a departmental officer against a physical document. */
+  OFFICER_ASSERTED: 'OFFICER_ASSERTED',
+} as const;
+export type IdentifierLinkSource =
+  (typeof IdentifierLinkSource)[keyof typeof IdentifierLinkSource];
+
 export const NotificationType = {
   INFO: 'INFO',
   SUCCESS: 'SUCCESS',
@@ -181,6 +192,10 @@ export const AuditAction = {
   USER_REGISTERED: 'USER_REGISTERED',
   USER_LOGIN: 'USER_LOGIN',
   USER_LOGIN_FAILED: 'USER_LOGIN_FAILED',
+  /** An identity provider asserted who this person is. */
+  IDENTITY_ASSERTED: 'IDENTITY_ASSERTED',
+  /** A departmental identifier was linked to a citizen, with a provenance. */
+  IDENTIFIER_LINKED: 'IDENTIFIER_LINKED',
   APPLICATION_CREATED: 'APPLICATION_CREATED',
   APPLICATION_SUBMITTED: 'APPLICATION_SUBMITTED',
   CONSENT_REQUESTED: 'CONSENT_REQUESTED',

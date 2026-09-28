@@ -7,6 +7,7 @@ export * from './exceptions.js';
 export * from './queue.js';
 export * from './sla.js';
 export * from './connector-registry.js';
+export * from './identity/index.js';
 export * from './metrics.js';
 export * from './applications.js';
 export * from './validation/index.js';

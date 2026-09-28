@@ -41,6 +41,7 @@ export async function resetDatabase(): Promise<void> {
   await prisma.workflowInstance.deleteMany();
   await prisma.consent.deleteMany();
   await prisma.application.deleteMany();
+  await prisma.identifierLink.deleteMany();
   await prisma.user.deleteMany();
   await prisma.citizen.deleteMany();
   await prisma.department.deleteMany();
@@ -49,7 +50,7 @@ export async function resetDatabase(): Promise<void> {
 /** Seeds the departments and one citizen backed by the synthetic registries. */
 export async function seedMinimal(externalId = 'CIT-1001') {
   const { prisma, hashPassword } = await import('@govflow/core');
-  const { DEPARTMENTS } = await import('@govflow/contracts');
+  const { DEPARTMENTS, deriveSeedIdentifier } = await import('@govflow/contracts');
 
   for (const def of DEPARTMENTS) {
     await prisma.department.upsert({
@@ -78,6 +79,19 @@ export async function seedMinimal(externalId = 'CIT-1001') {
       email: `${externalId.toLowerCase()}@example.gov.in`,
     },
   });
+  // Identifier crosswalk. The engine looks these up rather than deriving them,
+  // so a fixture citizen with no links can reach no department at all.
+  for (const def of DEPARTMENTS) {
+    await prisma.identifierLink.create({
+      data: {
+        citizenId: citizen.id,
+        departmentCode: def.code,
+        externalIdentifier: deriveSeedIdentifier(externalId, def.code),
+        source: 'SEED' as never,
+      },
+    });
+  }
+
   const citizenUser = await prisma.user.create({
     data: {
       name: 'Rohan Prajapati',
@@ -87,12 +101,29 @@ export async function seedMinimal(externalId = 'CIT-1001') {
       citizenId: citizen.id,
     },
   });
+  // Officers are scoped to the services their department owns, so a fixture
+  // officer needs a department: an account without one has no queue at all.
+  const educationUnit = await prisma.department.findUniqueOrThrow({
+    where: { code: 'EDUCATION' },
+  });
+  const revenueUnit = await prisma.department.findUniqueOrThrow({ where: { code: 'INCOME' } });
+
   const officer = await prisma.user.create({
     data: {
       name: 'Sunita Deshpande',
       email: 'officer@test.govflow',
       passwordHash,
       role: 'OFFICER' as never,
+      departmentId: educationUnit.id,
+    },
+  });
+  const revenueOfficer = await prisma.user.create({
+    data: {
+      name: 'Ramesh Gaikwad',
+      email: 'officer.revenue@test.govflow',
+      passwordHash,
+      role: 'OFFICER' as never,
+      departmentId: revenueUnit.id,
     },
   });
   const admin = await prisma.user.create({
@@ -104,7 +135,7 @@ export async function seedMinimal(externalId = 'CIT-1001') {
     },
   });
 
-  return { citizen, citizenUser, officer, admin, password: 'Password@123' };
+  return { citizen, citizenUser, officer, revenueOfficer, admin, password: 'Password@123' };
 }
 
 export async function login(app: Express, email: string, password = 'Password@123') {

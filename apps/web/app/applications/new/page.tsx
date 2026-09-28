@@ -154,7 +154,8 @@ export default function NewApplicationPage() {
             <CardHeader>
               <CardTitle className="text-sm">Applicant</CardTitle>
               <CardDescription>
-                Read from your verified profile. Nothing here is re-keyed.
+                From your GovFlow profile. Live registry pre-fill is not enabled yet -
+                these values are not re-fetched at submission.
               </CardDescription>
             </CardHeader>
             <CardContent>

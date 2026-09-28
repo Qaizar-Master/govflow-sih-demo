@@ -15,6 +15,7 @@ import {
   DEPARTMENTS,
   DataType,
   REPO_ROOT,
+  deriveSeedIdentifier,
   getServiceDefinition,
   env,
   type IdentityFacts,
@@ -321,6 +322,7 @@ async function wipe() {
   await prisma.workflowInstance.deleteMany();
   await prisma.consent.deleteMany();
   await prisma.application.deleteMany();
+  await prisma.identifierLink.deleteMany();
   await prisma.user.deleteMany();
   await prisma.citizen.deleteMany();
   await prisma.department.deleteMany();
@@ -367,15 +369,20 @@ async function main() {
 
   // ---- Staff accounts ---------------------------------------------------
   const passwordHash = await hashPassword(DEMO_PASSWORD);
-  const scholarshipUnit = await prisma.department.findUniqueOrThrow({ where: { code: 'EDUCATION' } });
+  const educationUnit = await prisma.department.findUniqueOrThrow({ where: { code: 'EDUCATION' } });
+  const revenueUnit = await prisma.department.findUniqueOrThrow({ where: { code: 'INCOME' } });
 
+  // One officer per owning department, because department scoping is only
+  // demonstrable if the two officers actually see different queues:
+  // Education owns the scholarship; Revenue owns income certificates and
+  // ration cards.
   const officer = await prisma.user.create({
     data: {
       name: 'Sunita Deshpande',
       email: 'officer@govflow.gov.in',
       passwordHash,
       role: 'OFFICER' as never,
-      departmentId: scholarshipUnit.id,
+      departmentId: educationUnit.id,
     },
   });
   const officer2 = await prisma.user.create({
@@ -384,7 +391,7 @@ async function main() {
       email: 'officer2@govflow.gov.in',
       passwordHash,
       role: 'OFFICER' as never,
-      departmentId: scholarshipUnit.id,
+      departmentId: revenueUnit.id,
     },
   });
   const admin = await prisma.user.create({
@@ -396,6 +403,15 @@ async function main() {
     },
   });
   console.log('[seed] officer + admin accounts');
+
+  /**
+   * The officer who would actually have handled this file. Decisions and notes
+   * are attributed through the owning department, so the seeded history obeys
+   * the same scoping rule the API now enforces - otherwise the demo would open
+   * on a queue full of decisions its own officer was not allowed to make.
+   */
+  const officerFor = (service: { owningDepartment: string }) =>
+    service.owningDepartment === 'EDUCATION' ? officer : officer2;
 
   // ---- Citizens & their logins ------------------------------------------
   const citizenByExternalId = new Map<string, { id: string; userId: string; name: string }>();
@@ -422,13 +438,31 @@ async function main() {
         citizenId: citizen.id,
       },
     });
+    // Identifier crosswalk. At runtime GovFlow looks these up rather than
+    // deriving them, so the demo dataset has to state them explicitly - which
+    // is the point: a link is a recorded fact with a provenance, and SEED is an
+    // honest provenance meaning "synthetic, carries no assurance".
+    for (const dept of DEPARTMENTS) {
+      await prisma.identifierLink.create({
+        data: {
+          citizenId: citizen.id,
+          departmentCode: dept.code,
+          externalIdentifier: deriveSeedIdentifier(facts.citizenId, dept.code),
+          source: 'SEED' as never,
+          verifiedAt: null,
+        },
+      });
+    }
+
     citizenByExternalId.set(facts.citizenId, {
       id: citizen.id,
       userId: user.id,
       name: facts.name,
     });
   }
-  console.log(`[seed] ${citizenByExternalId.size} citizens with logins`);
+  console.log(
+    `[seed] ${citizenByExternalId.size} citizens with logins and ${DEPARTMENTS.length} identifier links each`,
+  );
 
   // ---- Applications -----------------------------------------------------
   let seq = 0;
@@ -464,7 +498,7 @@ async function main() {
         createdAt: submittedAt,
         decisionAt:
           plan.decided !== undefined ? hoursAgo(spec.submittedDaysAgo * 24 - 30) : null,
-        decidedById: plan.decided !== undefined ? officer.id : null,
+        decidedById: plan.decided !== undefined ? officerFor(service).id : null,
         decisionNotes:
           plan.decided === 'APPROVE'
             ? 'All three departments agree and both certificates match the registries. Sanctioned under the state merit-cum-means scheme.'
@@ -848,7 +882,7 @@ async function main() {
             status: (spec.scenario === 'REJECTED' ? 'RESOLVED' : 'OPEN') as never,
             details: finding as never,
             resolvedAt: spec.scenario === 'REJECTED' ? application.decisionAt : null,
-            resolvedById: spec.scenario === 'REJECTED' ? officer.id : null,
+            resolvedById: spec.scenario === 'REJECTED' ? officerFor(service).id : null,
             resolutionNotes:
               spec.scenario === 'REJECTED'
                 ? 'Confirmed against the institution. Application rejected.'
@@ -864,7 +898,7 @@ async function main() {
       await prisma.reviewNote.create({
         data: {
           applicationId: application.id,
-          authorId: officer2.id,
+          authorId: officerFor(service).id,
           note: 'Requested the institution to confirm the full name on record. The abbreviation looks like a data-entry convention rather than a different person.',
           createdAt: hoursAgo(20),
         },
@@ -874,7 +908,7 @@ async function main() {
       await prisma.reviewNote.create({
         data: {
           applicationId: application.id,
-          authorId: officer.id,
+          authorId: officerFor(service).id,
           note: 'All three registries agree. Income well within the ceiling. Approving.',
           createdAt: hoursAgo(30),
         },
@@ -944,7 +978,7 @@ async function main() {
       });
       await prisma.notification.create({
         data: {
-          userId: officer.id,
+          userId: officerFor(service).id,
           applicationId: application.id,
           type: 'ERROR' as never,
           title: `Exception on ${application.applicationNumber}`,
@@ -984,7 +1018,7 @@ async function main() {
     if (plan.decided) {
       auditEvents.push({
         action: plan.decided === 'APPROVE' ? 'OFFICER_APPROVED' : 'OFFICER_REJECTED',
-        userId: officer.id,
+        userId: officerFor(service).id,
         at: application.decisionAt!,
         metadata: { applicationId: application.id, applicationNumber: application.applicationNumber },
       });
@@ -1008,7 +1042,7 @@ async function main() {
   }
 
   // Login history so the audit page is not empty on first open
-  for (const u of [officer.id, admin.id]) {
+  for (const u of [officer.id, officer2.id, admin.id]) {
     await prisma.auditLog.create({
       data: {
         action: 'USER_LOGIN',
@@ -1054,7 +1088,8 @@ async function main() {
   console.log(
     `[seed] demo password for every account: ${DEMO_PASSWORD}\n` +
       '[seed]   citizen : rohan.prajapati@example.gov.in  (no application yet - use for the live demo)\n' +
-      '[seed]   officer : officer@govflow.gov.in\n' +
+      '[seed]   officer : officer@govflow.gov.in   (Education - scholarships)\n' +
+      '[seed]   officer : officer2@govflow.gov.in  (Revenue - income certificates, ration cards)\n' +
       '[seed]   admin   : admin@govflow.gov.in',
   );
 }

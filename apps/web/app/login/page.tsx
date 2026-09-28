@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Loader2, ShieldCheck } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { BadgeCheck, Loader2, ShieldCheck } from 'lucide-react';
 import { homeFor, useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,15 +17,41 @@ const DEMO_ACCOUNTS = [
     email: 'rohan.prajapati@example.gov.in',
     note: 'No application yet — best for a live end-to-end run',
   },
-  { role: 'Officer', email: 'officer@govflow.gov.in', note: 'Review queue and decisions' },
+  {
+    role: 'Officer',
+    email: 'officer@govflow.gov.in',
+    note: 'Education Dept — scholarship queue only',
+  },
+  {
+    role: 'Officer',
+    email: 'officer2@govflow.gov.in',
+    note: 'Revenue Dept — income certificate and ration card queues',
+  },
   { role: 'Admin', email: 'admin@govflow.gov.in', note: 'Connector health and failure simulation' },
 ];
 
 const DEMO_PASSWORD = 'Password@123';
 
-export default function LoginPage() {
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? 'http://localhost:4000';
+
+/** Reasons the API can bounce a citizen back here from the SSO flow. */
+const SSO_ERRORS: Record<string, string> = {
+  cancelled: 'Sign-in was cancelled at the identity provider.',
+  expired: 'That sign-in attempt expired. Please try again.',
+  exchange_failed: 'The identity provider could not be reached. Is it running?',
+  untrusted_assertion: 'The identity provider’s response could not be verified.',
+  assertion_unavailable: 'The identity provider did not return your details.',
+  incomplete_assertion: 'The identity provider returned an incomplete profile.',
+  no_identity_claim: 'That account has no Identity Registry record to link to.',
+  already_bound: 'That registry identity is already linked to a different account.',
+};
+
+function LoginScreen() {
   const { login, user, loading } = useAuth();
   const router = useRouter();
+  const params = useSearchParams();
+  const ssoError = params.get('sso');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState(DEMO_PASSWORD);
   const [error, setError] = React.useState<string | null>(null);
@@ -128,12 +154,46 @@ export default function LoginPage() {
               </div>
 
               {error ? <Alert variant="destructive">{error}</Alert> : null}
+              {!error && ssoError ? (
+                <Alert variant="destructive">
+                  {SSO_ERRORS[ssoError] ?? 'Sign-in through the identity provider failed.'}
+                </Alert>
+              ) : null}
 
               <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 Sign in
               </Button>
             </form>
+
+            <div className="relative mt-5">
+              <div className="absolute inset-0 flex items-center" aria-hidden>
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-card px-2 text-xs uppercase tracking-wide text-muted-foreground">
+                  or
+                </span>
+              </div>
+            </div>
+
+            {/*
+              GovFlow never sees a password here. The provider returns an
+              assertion naming the citizen's identifier at each department,
+              which is what authorises the departmental lookups later.
+            */}
+            <a
+              href={`${API_BASE}/api/auth/sso/start`}
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-md border border-border px-3 py-2.5 text-sm font-medium transition-colors hover:border-primary hover:bg-primary-muted"
+            >
+              <BadgeCheck className="h-4 w-4 text-primary" />
+              Continue with MeriPehchaan
+              <span className="text-xs font-normal text-muted-foreground">(Simulated)</span>
+            </a>
+            <p className="mt-2 text-center text-[11px] text-muted-foreground">
+              Verifies your identity and links your department records. No password is shared
+              with GovFlow.
+            </p>
 
             <div className="mt-5 border-t border-border pt-4">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -173,5 +233,17 @@ export default function LoginPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+/**
+ * `useSearchParams` forces this page out of static generation unless it sits
+ * behind a Suspense boundary, and the production build fails without one.
+ */
+export default function LoginPage() {
+  return (
+    <React.Suspense fallback={<main className="min-h-screen bg-background" />}>
+      <LoginScreen />
+    </React.Suspense>
   );
 }

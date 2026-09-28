@@ -437,6 +437,12 @@ export async function getApplicationDetail(applicationId: string) {
 export interface ListApplicationsFilter {
   citizenId?: string;
   statuses?: ApplicationStatus[];
+  /**
+   * Restricts the result to these services. Officers are scoped to the
+   * services their department owns, so a Revenue officer never sees a
+   * scholarship file they have no standing to decide.
+   */
+  serviceTypes?: ServiceType[];
   search?: string;
   page?: number;
   pageSize?: number;
@@ -449,6 +455,7 @@ export async function listApplications(filter: ListApplicationsFilter = {}) {
   const where = {
     ...(filter.citizenId ? { citizenId: filter.citizenId } : {}),
     ...(filter.statuses?.length ? { status: { in: filter.statuses as never } } : {}),
+    ...(filter.serviceTypes ? { serviceType: { in: filter.serviceTypes as never } } : {}),
     ...(filter.search
       ? {
           OR: [

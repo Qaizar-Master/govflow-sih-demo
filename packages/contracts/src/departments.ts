@@ -151,10 +151,22 @@ export function getDepartmentDefinition(code: string): DepartmentDefinition {
 }
 
 /**
- * Identifier crosswalk. Departments key citizens differently (CIT-1001 vs
- * INC-1001 vs STU-1001) - one of the concrete interoperability pains.
+ * SEEDING AND FIXTURES ONLY - never use this at runtime.
+ *
+ * Departments key citizens differently (CIT-1001 vs INC-1001 vs STU-1001),
+ * which is one of the concrete interoperability pains. Real keyspaces do not
+ * share a numeric suffix, so deriving one identifier from another by string
+ * surgery is a demo convenience, not an interoperability strategy: the moment
+ * a department issues its own sequence the derivation silently addresses the
+ * wrong citizen.
+ *
+ * At runtime the mapping is looked up in the `IdentifierLink` table, populated
+ * from an identity assertion. This helper exists only to generate that table's
+ * rows for the synthetic dataset, where the suffixes really are aligned.
+ *
+ * @see resolveDepartmentIdentifier in @govflow/core
  */
-export function toDepartmentIdentifier(canonicalCitizenId: string, code: string): string {
+export function deriveSeedIdentifier(canonicalCitizenId: string, code: string): string {
   const def = getDepartmentDefinition(code);
   const numeric = canonicalCitizenId.replace(/^[A-Z]+-?/i, '');
   return `${def.identifierPrefix}${numeric}`;

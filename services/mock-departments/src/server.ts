@@ -1,5 +1,6 @@
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { EDUCATION, IDENTITY, INCOME } from './data.js';
+import { createSsoRouter } from './sso.js';
 
 /**
  * SIMULATED DEPARTMENTAL SYSTEMS
@@ -158,6 +159,15 @@ app.get('/api/student/:studentId', requireBasic, async (req, res) => {
 });
 
 // ===========================================================================
+// Simulated national identity provider.
+//
+// Hosted here for the same reason the three departments share a process: a demo
+// should not need six containers. It is conceptually a separate operator and
+// shares no state with the registries above.
+// ===========================================================================
+app.use('/sso', createSsoRouter());
+
+// ===========================================================================
 // Health - honours the per-department outage switch
 // ===========================================================================
 app.get('/health', (req, res) => {
@@ -251,6 +261,13 @@ app.get('/', (_req, res) => {
         },
       },
     ],
+    identityProvider: {
+      name: 'MeriPehchaan (Simulated)',
+      discovery: 'GET /sso/.well-known/openid-configuration',
+      authorize: 'GET /sso/authorize?client_id=&redirect_uri=&state=',
+      token: 'POST /sso/token',
+      userinfo: 'GET /sso/userinfo',
+    },
     control: {
       inspect: 'GET /__control',
       simulate: 'POST /__control/:department { "mode": "ERROR_500|TIMEOUT|MALFORMED|UNAUTHORIZED|OFF" }',
@@ -265,6 +282,6 @@ app.use((_req, res) => {
 app.listen(PORT, () => {
   // eslint-disable-next-line no-console
   console.log(
-    `[mock-departments] simulated IDENTITY / INCOME / EDUCATION registries listening on :${PORT}`,
+    `[mock-departments] simulated IDENTITY / INCOME / EDUCATION registries + MeriPehchaan (Simulated) SSO listening on :${PORT}`,
   );
 });

@@ -4,7 +4,6 @@ import {
   DEPARTMENTS,
   env,
   getDepartmentDefinition,
-  toDepartmentIdentifier,
 } from '@govflow/contracts';
 import {
   checkAllDepartments,
@@ -13,6 +12,7 @@ import {
   platformMetrics,
   prisma,
   queueStats,
+  resolveDepartmentIdentifier,
   setDepartmentFailure,
 } from '@govflow/core';
 import { isConnectorError } from '@govflow/connector-sdk';
@@ -171,8 +171,35 @@ adminRouter.post(
     assertKnownDepartment(code);
     const body = req.body as z.infer<typeof testSchema>;
 
+    // The probe resolves the identifier the same way the workflow does - via
+    // the stored crosswalk - so what an admin sees here is what the engine
+    // would actually send.
+    const citizen = await prisma.citizen.findUnique({
+      where: { externalId: body.citizenExternalId },
+      select: { id: true },
+    });
+    if (!citizen) throw ApiError.notFound(`No citizen ${body.citizenExternalId}`);
+
+    let identifier: string;
+    let identifierSource: string;
+    try {
+      const link = await resolveDepartmentIdentifier(citizen.id, code);
+      identifier = link.identifier;
+      identifierSource = link.source;
+    } catch (error) {
+      if (isConnectorError(error)) {
+        return ok(res, {
+          ok: false,
+          department: code,
+          departmentIdentifier: null,
+          durationMs: 0,
+          error: error.toPublicJSON(),
+        });
+      }
+      throw error;
+    }
+
     const connector = await getConnector(code);
-    const identifier = toDepartmentIdentifier(body.citizenExternalId, code);
     const started = Date.now();
 
     try {
@@ -181,6 +208,7 @@ adminRouter.post(
         ok: true,
         department: code,
         departmentIdentifier: identifier,
+        identifierSource,
         durationMs: Date.now() - started,
         mapping: getDepartmentDefinition(code).mapping.name,
         // Both sides of the boundary, so the normalisation is visible.

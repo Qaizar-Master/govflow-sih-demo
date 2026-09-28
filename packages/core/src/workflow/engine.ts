@@ -15,7 +15,6 @@ import {
   ValidationStatus,
   WorkflowStatus,
   getDepartmentDefinition,
-  toDepartmentIdentifier,
   workflowConfig,
   type ValidationFinding,
   type WorkflowStepDefinition,
@@ -26,6 +25,7 @@ import { recordAudit } from '../audit.js';
 import { raiseException } from '../exceptions.js';
 import { notifyApplicant, notifyRole } from '../notifications.js';
 import { getConnector } from '../connector-registry.js';
+import { resolveDepartmentIdentifier } from '../identity/crosswalk.js';
 import { produceValidationReport } from '../validation/index.js';
 import { classifyDocument, documentProcessor } from '../documents/index.js';
 import { enqueueStep } from '../queue.js';
@@ -626,7 +626,10 @@ async function handleDepartmentLookup(
   }
 
   const connector = await getConnector(code, { applicationId: ctx.applicationId });
-  const identifier = toDepartmentIdentifier(ctx.citizenExternalId, code);
+  // Looked up, never derived: see resolveDepartmentIdentifier. Throws a
+  // non-retryable ConnectorError when GovFlow holds no link for this citizen,
+  // which surfaces as an exception rather than three pointless retries.
+  const { identifier } = await resolveDepartmentIdentifier(ctx.citizenId, code);
   const outcome = await connector.ingest(identifier);
 
   // Replace any earlier record of this type for this application.

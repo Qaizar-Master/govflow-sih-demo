@@ -289,8 +289,8 @@ Password for **every** account: `Password@123`
 | Citizen | `aditya.sharma@example.gov.in` | Has an approved application |
 | Citizen | `vikram.shinde@example.gov.in` | Has a name + income mismatch |
 | Citizen | `meera.iyer@example.gov.in` | Blocked by a connector failure |
-| Officer | `officer@govflow.gov.in` | Review queue and decisions |
-| Officer | `officer2@govflow.gov.in` | Second officer |
+| Officer | `officer@govflow.gov.in` | Education Department - scholarship queue only |
+| Officer | `officer2@govflow.gov.in` | Revenue Department - income certificate and ration card queues only |
 | Admin | `admin@govflow.gov.in` | Connector health, failure simulation, audit |
 
 The login page lists the three main accounts and fills them in on click.

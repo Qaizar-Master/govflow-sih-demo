@@ -48,6 +48,11 @@ services:
       INCOME_API_TOKEN: ${INCOME_API_TOKEN:-income-demo-bearer-token}
       EDUCATION_BASIC_USER: ${EDUCATION_BASIC_USER:-education}
       EDUCATION_BASIC_PASS: ${EDUCATION_BASIC_PASS:-education-demo-pass}
+      SSO_CLIENT_ID: ${SSO_CLIENT_ID:-govflow-demo}
+      SSO_CLIENT_SECRET: ${SSO_CLIENT_SECRET:-sso-demo-client-secret}
+      # redirect_uri allowlist. An open redirect_uri is the classic OAuth hole,
+      # so the provider only ever hands a code to these exact URLs.
+      SSO_ALLOWED_REDIRECTS: http://localhost:4000/api/auth/sso/callback
     ports:
       - '5001:5001'
     healthcheck:
@@ -79,6 +84,13 @@ services:
       INCOME_API_TOKEN: ${INCOME_API_TOKEN:-income-demo-bearer-token}
       EDUCATION_BASIC_USER: ${EDUCATION_BASIC_USER:-education}
       EDUCATION_BASIC_PASS: ${EDUCATION_BASIC_PASS:-education-demo-pass}
+      # Simulated identity provider. Two URLs on purpose: the browser is sent to
+      # the published host port, while the API exchanges the code over the
+      # Compose network. One URL cannot serve both.
+      SSO_AUTHORIZE_URL: http://localhost:5001/sso
+      SSO_INTERNAL_URL: http://mock-departments:5001/sso
+      SSO_CLIENT_ID: ${SSO_CLIENT_ID:-govflow-demo}
+      SSO_CLIENT_SECRET: ${SSO_CLIENT_SECRET:-sso-demo-client-secret}
       LEGACY_CSV_PATH: /app/data/legacy/beneficiaries.csv
       UPLOAD_DIR: /app/data/uploads
       CONNECTOR_TIMEOUT_MS: ${CONNECTOR_TIMEOUT_MS:-4000}

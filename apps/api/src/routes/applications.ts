@@ -26,7 +26,12 @@ import { ApiError } from '../lib/api-error.js';
 import { handler } from '../lib/async-handler.js';
 import { ok } from '../lib/respond.js';
 import { safeDisplayName, uploadDocument } from '../lib/uploads.js';
-import { assertApplicationAccess, authenticate, requireRole } from '../middleware/auth.js';
+import {
+  assertApplicationAccess,
+  assertOfficerScope,
+  authenticate,
+  requireRole,
+} from '../middleware/auth.js';
 import { validateBody, validateQuery } from '../middleware/validate.js';
 
 export const applicationsRouter = Router();
@@ -353,11 +358,9 @@ applicationsRouter.post(
   validateBody(noteSchema),
   handler(async (req, res) => {
     const applicationId = req.params.id!;
-    const exists = await prisma.application.findUnique({
-      where: { id: applicationId },
-      select: { id: true },
-    });
-    if (!exists) throw ApiError.notFound('Application not found');
+    // Same department scope as the queue: an officer cannot annotate a file
+    // they are not competent to decide.
+    await assertOfficerScope(req, applicationId);
 
     const note = await addReviewNote(
       applicationId,

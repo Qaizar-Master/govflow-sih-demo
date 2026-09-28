@@ -1,7 +1,13 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { AuditAction, Role } from '@govflow/contracts';
-import { hashPassword, prisma, recordAudit, verifyPassword } from '@govflow/core';
+import {
+  hashPassword,
+  listIdentifierLinks,
+  prisma,
+  recordAudit,
+  verifyPassword,
+} from '@govflow/core';
 import { ApiError } from '../lib/api-error.js';
 import { handler } from '../lib/async-handler.js';
 import { ok } from '../lib/respond.js';
@@ -227,6 +233,43 @@ authRouter.get(
         ? { ...citizen, dateOfBirth: citizen.dateOfBirth.toISOString().slice(0, 10) }
         : null,
       department,
+    });
+  }),
+);
+
+/**
+ * The citizen's departmental identifiers and where each one came from.
+ *
+ * Surfaced deliberately: provenance that nobody can see is provenance nobody
+ * checks. A link marked SEED is synthetic demo data and says so; one marked
+ * SSO_ASSERTION was vouched for by the identity provider at a stated time.
+ */
+authRouter.get(
+  '/me/identifiers',
+  authenticate,
+  handler(async (req, res) => {
+    const user = req.user!;
+    if (!user.citizenId) return ok(res, { identityAssertedAt: null, links: [] });
+
+    const [citizen, links] = await Promise.all([
+      prisma.citizen.findUnique({
+        where: { id: user.citizenId },
+        select: { identityAssertedAt: true, ssoSubject: true },
+      }),
+      listIdentifierLinks(user.citizenId),
+    ]);
+
+    return ok(res, {
+      identityAssertedAt: citizen?.identityAssertedAt?.toISOString() ?? null,
+      identityProviderLinked: Boolean(citizen?.ssoSubject),
+      links: Object.entries(links)
+        .map(([departmentCode, link]) => ({
+          departmentCode,
+          identifier: link.identifier,
+          source: link.source,
+          verifiedAt: link.verifiedAt?.toISOString() ?? null,
+        }))
+        .sort((a, b) => a.departmentCode.localeCompare(b.departmentCode)),
     });
   }),
 );

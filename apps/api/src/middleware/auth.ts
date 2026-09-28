@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import { Role, type AuthUser } from '@govflow/contracts';
+import { Role, serviceTypesOwnedBy, type AuthUser, type ServiceType } from '@govflow/contracts';
 import { prisma } from '@govflow/core';
 import { ApiError } from '../lib/api-error.js';
 import { verifyToken } from '../lib/tokens.js';
@@ -100,4 +100,59 @@ export async function assertApplicationAccess(
     }
   }
   return application;
+}
+
+/**
+ * The services the signed-in officer may act on, or `null` for unrestricted.
+ *
+ * An officer belongs to one department, and a department owns the outcome of
+ * some services and not others: a Revenue officer has no standing to decide a
+ * scholarship. Admins are deliberately unrestricted - they operate the
+ * platform rather than adjudicate on it.
+ *
+ * An officer with no department is a misconfigured account, not a superuser,
+ * so it is refused rather than widened.
+ */
+export async function officerServiceScope(req: Request): Promise<ServiceType[] | null> {
+  const user = req.user;
+  if (!user) throw ApiError.unauthorized();
+  if (user.role === Role.ADMIN) return null;
+
+  if (!user.departmentId) {
+    throw ApiError.forbidden(
+      'This officer account is not attached to a department, so it has no review queue.',
+    );
+  }
+  const department = await prisma.department.findUnique({
+    where: { id: user.departmentId },
+    select: { code: true },
+  });
+  if (!department) {
+    throw ApiError.forbidden('This officer account points at a department that no longer exists.');
+  }
+  return serviceTypesOwnedBy(department.code);
+}
+
+/**
+ * Ownership check for officer-scoped resources.
+ *
+ * Out-of-scope applications are reported as 404 rather than 403, matching
+ * `assertApplicationAccess`: a 403 would confirm that the application number
+ * exists, which is itself a small disclosure.
+ */
+export async function assertOfficerScope(
+  req: Request,
+  applicationId: string,
+): Promise<{ id: string; serviceType: ServiceType }> {
+  const application = await prisma.application.findUnique({
+    where: { id: applicationId },
+    select: { id: true, serviceType: true },
+  });
+  if (!application) throw ApiError.notFound('Application not found');
+
+  const scope = await officerServiceScope(req);
+  if (scope && !scope.includes(application.serviceType as ServiceType)) {
+    throw ApiError.notFound('Application not found');
+  }
+  return application as { id: string; serviceType: ServiceType };
 }

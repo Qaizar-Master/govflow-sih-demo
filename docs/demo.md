@@ -14,7 +14,8 @@ Wait for `govflow-api` to log `starting API`, then open **http://localhost:3000*
 | Role | Email | Password |
 |---|---|---|
 | Citizen | `rohan.prajapati@example.gov.in` | `Password@123` |
-| Officer | `officer@govflow.gov.in` | `Password@123` |
+| Officer (Education) | `officer@govflow.gov.in` | `Password@123` |
+| Officer (Revenue) | `officer2@govflow.gov.in` | `Password@123` |
 | Admin | `admin@govflow.gov.in` | `Password@123` |
 
 The login page lists these and fills them in on click. Rohan Prajapati is deliberately the

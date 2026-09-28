@@ -7,7 +7,7 @@ import {
   incomeMapping,
   legacyMapping,
   normalizedRecordSchema,
-  toDepartmentIdentifier,
+  deriveSeedIdentifier,
 } from '@govflow/contracts';
 import { applyMapping, applyTransform, createConnector, getPath, toIsoDate } from '@govflow/connector-sdk';
 
@@ -125,13 +125,17 @@ describe('connector transform to the common data model', () => {
   });
 });
 
-describe('identifier crosswalk', () => {
-  it('translates the canonical id into each department keyspace', () => {
-    expect(toDepartmentIdentifier('CIT-1001', 'IDENTITY')).toBe('CIT-1001');
-    expect(toDepartmentIdentifier('CIT-1001', 'INCOME')).toBe('INC-1001');
-    expect(toDepartmentIdentifier('CIT-1001', 'EDUCATION')).toBe('STU-1001');
+describe('seed identifier derivation', () => {
+  // This helper generates the IdentifierLink rows for the synthetic dataset.
+  // It is NOT the runtime crosswalk - resolveDepartmentIdentifier reads the
+  // stored link, because real departmental keyspaces are independent and
+  // cannot be derived from one another.
+  it('produces each department keyspace for the synthetic dataset', () => {
+    expect(deriveSeedIdentifier('CIT-1001', 'IDENTITY')).toBe('CIT-1001');
+    expect(deriveSeedIdentifier('CIT-1001', 'INCOME')).toBe('INC-1001');
+    expect(deriveSeedIdentifier('CIT-1001', 'EDUCATION')).toBe('STU-1001');
     // The legacy export carries an explicit crosswalk column.
-    expect(toDepartmentIdentifier('CIT-1001', 'LEGACY')).toBe('CIT-1001');
+    expect(deriveSeedIdentifier('CIT-1001', 'LEGACY')).toBe('CIT-1001');
   });
 });
 

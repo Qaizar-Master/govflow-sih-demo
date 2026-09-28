@@ -67,6 +67,12 @@ export const CONNECTOR_ERROR_KIND = {
   MALFORMED_RESPONSE: 'MALFORMED_RESPONSE',
   SCHEMA_VALIDATION: 'SCHEMA_VALIDATION',
   SOURCE_UNAVAILABLE: 'SOURCE_UNAVAILABLE',
+  /**
+   * GovFlow holds no identifier for this citizen in this department, so there
+   * is nothing to ask for. Not retryable: the link must be established, not
+   * waited for.
+   */
+  IDENTIFIER_NOT_LINKED: 'IDENTIFIER_NOT_LINKED',
   UNKNOWN: 'UNKNOWN',
 } as const;
 export type ConnectorErrorKind =

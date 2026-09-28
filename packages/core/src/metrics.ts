@@ -1,4 +1,4 @@
-import { ApplicationStatus, SlaStatus } from '@govflow/contracts';
+import { ApplicationStatus, SlaStatus, type ServiceType } from '@govflow/contracts';
 import { prisma } from './db.js';
 import { assessSla } from './sla.js';
 import { queueStats } from './queue.js';
@@ -154,8 +154,15 @@ export async function platformMetrics() {
   };
 }
 
-/** Officer-scoped summary for the officer dashboard header. */
-export async function officerMetrics() {
+/**
+ * Summary for the officer dashboard header.
+ *
+ * `serviceTypes` narrows every count to the services the officer's department
+ * owns. Without it the header would contradict the queue below it - an officer
+ * would see "14 awaiting review" and find four files in their list.
+ */
+export async function officerMetrics(serviceTypes?: ServiceType[]) {
+  const scope = serviceTypes ? { serviceType: { in: serviceTypes as never } } : {};
   const [
     total,
     requiresReview,
@@ -165,19 +172,32 @@ export async function officerMetrics() {
     openExceptions,
     awaitingCitizen,
   ] = await Promise.all([
-    prisma.application.count(),
-    prisma.application.count({ where: { status: ApplicationStatus.REQUIRES_REVIEW as never } }),
-    prisma.application.count({ where: { status: ApplicationStatus.UNDER_REVIEW as never } }),
-    prisma.application.count({ where: { status: ApplicationStatus.APPROVED as never } }),
-    prisma.application.count({ where: { status: ApplicationStatus.REJECTED as never } }),
-    prisma.exception.count({ where: { status: 'OPEN' } }),
+    prisma.application.count({ where: scope }),
     prisma.application.count({
-      where: { status: ApplicationStatus.AWAITING_CITIZEN_ACTION as never },
+      where: { ...scope, status: ApplicationStatus.REQUIRES_REVIEW as never },
+    }),
+    prisma.application.count({
+      where: { ...scope, status: ApplicationStatus.UNDER_REVIEW as never },
+    }),
+    prisma.application.count({
+      where: { ...scope, status: ApplicationStatus.APPROVED as never },
+    }),
+    prisma.application.count({
+      where: { ...scope, status: ApplicationStatus.REJECTED as never },
+    }),
+    prisma.exception.count({
+      where: {
+        status: 'OPEN',
+        ...(serviceTypes ? { application: { serviceType: { in: serviceTypes as never } } } : {}),
+      },
+    }),
+    prisma.application.count({
+      where: { ...scope, status: ApplicationStatus.AWAITING_CITIZEN_ACTION as never },
     }),
   ]);
 
   const live = await prisma.application.findMany({
-    where: { decisionAt: null },
+    where: { ...scope, decisionAt: null },
     select: {
       submittedAt: true,
       slaTargetDays: true,
@@ -198,7 +218,7 @@ export async function officerMetrics() {
   }).length;
 
   const decided = await prisma.application.findMany({
-    where: { decisionAt: { not: null } },
+    where: { ...scope, decisionAt: { not: null } },
     select: { submittedAt: true, decisionAt: true },
   });
   const hours = decided.map(

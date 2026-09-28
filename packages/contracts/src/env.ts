@@ -60,6 +60,19 @@ const envSchema = z.object({
   EDUCATION_BASIC_USER: z.string().default('education'),
   EDUCATION_BASIC_PASS: z.string().default('education-demo-pass'),
 
+  /**
+   * Simulated national identity provider ("MeriPehchaan (Simulated)").
+   *
+   * Two URLs, deliberately: the browser is redirected to AUTHORIZE_URL and must
+   * be able to reach it from the host, while the API exchanges the code over
+   * INTERNAL_URL from inside the Docker network. Collapsing them into one is
+   * the classic way this breaks in Compose and works on a laptop.
+   */
+  SSO_AUTHORIZE_URL: z.string().default('http://localhost:5001/sso'),
+  SSO_INTERNAL_URL: z.string().default('http://localhost:5001/sso'),
+  SSO_CLIENT_ID: z.string().default('govflow-demo'),
+  SSO_CLIENT_SECRET: z.string().min(8).default('sso-demo-client-secret'),
+
   LEGACY_CSV_PATH: z.string().default('./data/legacy/beneficiaries.csv'),
 
   CONNECTOR_TIMEOUT_MS: z.coerce.number().int().min(200).default(4000),
