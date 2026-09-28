@@ -9,3 +9,4 @@ export { env, REPO_ROOT, type Env } from './env.js';
 export * from './mapping.js';
 export * from './departments.js';
 export * from './workflow.js';
+export * from './form-schema.js';

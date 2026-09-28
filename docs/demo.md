@@ -59,7 +59,41 @@ verification date, and says so in a warning. That contrast is worth showing.
 
 ---
 
-## Demo 1 — Happy path (≈3 min)
+## Demo 1 — Pre-fill and reconciliation (≈4 min)
+
+**Point:** the citizen barely types, and the officer can prove it.
+
+1. Signed in as the citizen, go to **New application → Merit-cum-Means Scholarship →
+   Continue**.
+2. **Authorise access.** Three departments, each with a stated purpose. Leave them ticked
+   and click **Continue**.
+3. The form comes back **answered**: *"8 of 8 answers came from the departments."* Each
+   field carries the department that supplied it. Identity fields are locked — only the
+   registry can change those.
+4. **Change the income** from `180000` to `98000`. A `changed` badge appears next to it.
+   Submit.
+
+**What to say:** *"The applicant typed one number — the amount they're asking for.
+Everything else came from departments that already held it."*
+
+5. Sign in as the **Education officer** → open the application → the **Form** tab.
+
+| Field | Shown to applicant | Submitted | Registry now | Verdict |
+|---|---|---|---|---|
+| Annual family income | 180,000 | **98,000** | 180,000 | Changed by applicant |
+| everything else | … | … | … | Matches registry |
+
+**The line that lands:** *"Two mismatches can look identical. If the applicant's figure
+differs from a registry that never moved, the applicant changed it. If it matches what
+they were shown but the registry has since moved, the registry changed and they did
+nothing wrong. Without storing what they were shown, an officer cannot tell those apart —
+so we store it."*
+
+`GF-SCH-2026-00003` in the seeded queue already shows this if you would rather not type.
+
+---
+
+## Demo 1b — Happy path (≈3 min)
 
 **Point:** the citizen supplies almost nothing; GovFlow gathers the rest from four systems.
 

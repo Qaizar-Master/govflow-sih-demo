@@ -17,6 +17,7 @@ import { assessSla } from './sla.js';
 import { createLogger } from './logger.js';
 import { resumeWorkflow, startWorkflow } from './workflow/engine.js';
 import { assembleFacts } from './workflow/facts.js';
+import { reconcileApplication } from './prefill/reconcile.js';
 
 const log = createLogger('applications');
 
@@ -185,7 +186,14 @@ export async function setConsent(input: GrantConsentInput) {
     where: { applicationId: input.applicationId, status: { not: ConsentStatus.GRANTED as never } },
   });
 
-  if (outstanding === 0) {
+  // A draft has no workflow to release. Consent there authorises pre-fill and
+  // nothing else; verification starts when the citizen submits.
+  const workflow = await prisma.workflowInstance.findUnique({
+    where: { applicationId: input.applicationId },
+    select: { id: true },
+  });
+
+  if (outstanding === 0 && workflow) {
     await resumeWorkflow(input.applicationId, { userId: input.actorUserId ?? null });
     await notifyApplicant(
       input.applicationId,
@@ -315,10 +323,13 @@ export async function getApplicationDetail(applicationId: string) {
   });
   if (!application) return null;
 
-  const [timeline, sla, facts, auditTrail] = await Promise.all([
+  const [timeline, sla, facts, reconciliation, auditTrail] = await Promise.all([
     getTimeline(applicationId),
     slaFor(applicationId),
     assembleFacts(applicationId),
+    // Three-way compare of what the citizen was shown, what they sent, and
+    // what the registries say now.
+    reconcileApplication(applicationId),
     prisma.auditLog.findMany({
       where: {
         OR: [
@@ -351,8 +362,10 @@ export async function getApplicationDetail(applicationId: string) {
       decidedBy: application.decidedBy,
       slaTargetDays: application.slaTargetDays,
       validationSummary: application.validationSummary,
+      submittedValues: application.submittedValues,
       stepsPending,
     },
+    reconciliation,
     citizen: {
       id: application.citizen.id,
       externalId: application.citizen.externalId,

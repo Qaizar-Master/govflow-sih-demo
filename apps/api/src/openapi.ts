@@ -211,6 +211,54 @@ enforced in Express middleware, never in the browser.`,
         responses: { 302: { description: 'Redirect to the frontend, or back to /login with a reason' } },
       },
     },
+    '/api/applications/draft': {
+      post: {
+        tags: ['Applications'],
+        summary: 'Open a draft so the form can be pre-filled',
+        description:
+          'A draft is inert: no workflow runs, no officer sees it and no SLA clock starts. It exists to hold the consent ledger that authorises pre-fill, and the snapshot of what pre-fill returned.',
+        requestBody: jsonBody({
+          type: 'object',
+          required: ['serviceType'],
+          properties: {
+            serviceType: {
+              type: 'string',
+              enum: ['SCHOLARSHIP', 'INCOME_CERTIFICATE', 'RATION_CARD'],
+            },
+          },
+        }),
+        responses: { 201: okResponse('Draft with its pending consent scopes'), ...common },
+      },
+    },
+    '/api/applications/{id}/prefill': {
+      post: {
+        tags: ['Applications'],
+        summary: 'Answer the form from the departments the citizen consented to',
+        description:
+          'Reads only. A department with no granted consent is not contacted and its fields return CONSENT_REQUIRED; a department that is down returns UNAVAILABLE with a note, never a silently blank box. Records the snapshot the later reconciliation compares against; calling it twice replaces that snapshot rather than appending.',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: okResponse('Fields with values, per-field status and department attribution'),
+          409: errorResponse,
+          ...common,
+        },
+      },
+    },
+    '/api/applications/{id}/submit': {
+      post: {
+        tags: ['Applications'],
+        summary: 'Submit a draft and release the workflow',
+        description:
+          'Validates the answers against the service form schema and stores them verbatim, so a value the citizen changed stays visibly theirs. Field-level errors are returned in error.details.',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: jsonBody({
+          type: 'object',
+          required: ['values'],
+          properties: { values: { type: 'object', additionalProperties: true } },
+        }),
+        responses: { 200: okResponse('Submitted application'), 409: errorResponse, ...common },
+      },
+    },
     '/api/applications': {
       get: {
         tags: ['Applications'],

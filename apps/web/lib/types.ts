@@ -175,6 +175,79 @@ export interface AuditEntry {
   createdAt: string;
 }
 
+export type ReconciliationVerdict =
+  | 'MATCH'
+  | 'CITIZEN_EDITED'
+  | 'REGISTRY_CHANGED'
+  | 'DIVERGENT'
+  | 'AWAITING_VERIFICATION'
+  | 'CITIZEN_DECLARED'
+  | 'NO_EVIDENCE';
+
+export interface ReconciliationRow {
+  key: string;
+  label: string;
+  authority: 'REGISTRY' | 'REGISTRY_CORRECTABLE' | 'CITIZEN';
+  prefilled: string | number | null;
+  submitted: string | number | null;
+  verified: string | number | null;
+  verdict: ReconciliationVerdict;
+  explanation: string;
+  departmentCode: string | null;
+}
+
+export interface ReconciliationReport {
+  rows: ReconciliationRow[];
+  attentionCount: number;
+  matchedCount: number;
+  available: boolean;
+}
+
+/** One field of a service's declarative application form. */
+export interface FormFieldDefinition {
+  key: string;
+  label: string;
+  type: 'text' | 'number' | 'date' | 'select';
+  authority: 'REGISTRY' | 'REGISTRY_CORRECTABLE' | 'CITIZEN';
+  required: boolean;
+  source: { departmentCode: string; cdmField: string } | null;
+  helpText?: string;
+  options?: string[];
+  unit?: string;
+  placeholder?: string;
+}
+
+export interface FormSchema {
+  serviceType: string;
+  sections: { title: string; description: string; fields: FormFieldDefinition[] }[];
+}
+
+export type PrefillFieldStatus =
+  | 'FILLED'
+  | 'CONSENT_REQUIRED'
+  | 'UNAVAILABLE'
+  | 'NOT_HELD'
+  | 'CITIZEN_SUPPLIED';
+
+export interface PrefilledField {
+  key: string;
+  label: string;
+  authority: 'REGISTRY' | 'REGISTRY_CORRECTABLE' | 'CITIZEN';
+  value: string | number | null;
+  status: PrefillFieldStatus;
+  source: { departmentCode: string; sourceSystem: string; fetchedAt: string } | null;
+  note?: string;
+}
+
+export interface PrefillResult {
+  applicationId: string;
+  fields: PrefilledField[];
+  unavailable: { departmentCode: string; reason: string }[];
+  filledCount: number;
+  totalPrefillable: number;
+  fetchedAt: string;
+}
+
 export interface ApplicationDetail {
   application: {
     id: string;
@@ -190,8 +263,10 @@ export interface ApplicationDetail {
     decidedBy: { id: string; name: string } | null;
     slaTargetDays: number;
     validationSummary: ValidationReport | null;
+    submittedValues: Record<string, string | number | null> | null;
     stepsPending: number;
   };
+  reconciliation: ReconciliationReport;
   citizen: {
     id: string;
     externalId: string;

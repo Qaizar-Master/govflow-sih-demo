@@ -1,5 +1,11 @@
 import type { NextFunction, Request, Response } from 'express';
-import { Role, serviceTypesOwnedBy, type AuthUser, type ServiceType } from '@govflow/contracts';
+import {
+  ApplicationStatus,
+  Role,
+  serviceTypesOwnedBy,
+  type AuthUser,
+  type ServiceType,
+} from '@govflow/contracts';
 import { prisma } from '@govflow/core';
 import { ApiError } from '../lib/api-error.js';
 import { verifyToken } from '../lib/tokens.js';
@@ -146,9 +152,15 @@ export async function assertOfficerScope(
 ): Promise<{ id: string; serviceType: ServiceType }> {
   const application = await prisma.application.findUnique({
     where: { id: applicationId },
-    select: { id: true, serviceType: true },
+    select: { id: true, serviceType: true, status: true },
   });
   if (!application) throw ApiError.notFound('Application not found');
+
+  // A draft has not been sent to anyone. It is not an officer-addressable
+  // resource at all, however the id was obtained.
+  if (application.status === ApplicationStatus.DRAFT) {
+    throw ApiError.notFound('Application not found');
+  }
 
   const scope = await officerServiceScope(req);
   if (scope && !scope.includes(application.serviceType as ServiceType)) {

@@ -11,15 +11,19 @@ import {
 import {
   addReviewNote,
   createApplication,
+  createDraftApplication,
+  DraftValidationError,
   documentProcessor,
   getApplicationDetail,
   getTimeline,
   listApplications,
+  prefillApplication,
   prisma,
   recordAudit,
   resumeWorkflow,
   revalidateApplication,
   setConsent,
+  submitDraftApplication,
   revokeConsent,
 } from '@govflow/core';
 import { ApiError } from '../lib/api-error.js';
@@ -45,6 +49,109 @@ const createSchema = z.object({
    *  not apply to the chosen service are simply ignored. */
   consents: z.array(z.enum(['IDENTITY', 'INCOME', 'EDUCATION'])).default([]),
 });
+
+/**
+ * The draft lifecycle: open, pre-fill, submit.
+ *
+ * Kept distinct from POST /applications, which submits in one shot. Pre-fill
+ * needs an application to exist first, because consent is recorded per
+ * application and no department may be contacted without it.
+ */
+const draftSchema = z.object({ serviceType: z.nativeEnum(ServiceType) });
+
+applicationsRouter.post(
+  '/draft',
+  requireRole(Role.CITIZEN),
+  validateBody(draftSchema),
+  handler(async (req, res) => {
+    const body = req.body as z.infer<typeof draftSchema>;
+    const citizenId = req.user!.citizenId;
+    if (!citizenId) throw ApiError.badRequest('This account is not linked to a citizen record');
+
+    const draft = await createDraftApplication({
+      citizenId,
+      serviceType: body.serviceType,
+      actorUserId: req.user!.id,
+    });
+
+    return ok(
+      res,
+      {
+        applicationId: draft.id,
+        applicationNumber: draft.applicationNumber,
+        status: draft.status,
+        consents: draft.consents.map((c) => ({
+          departmentCode: c.departmentCode,
+          purpose: c.purpose,
+          status: c.status,
+        })),
+      },
+      201,
+    );
+  }),
+);
+
+/**
+ * Answers the form from the departments the citizen has consented to.
+ *
+ * A POST rather than a GET: it contacts external systems and records both an
+ * audit entry and the snapshot the later reconciliation depends on. Calling it
+ * twice is safe - the snapshot is replaced, not appended.
+ */
+applicationsRouter.post(
+  '/:id/prefill',
+  requireRole(Role.CITIZEN),
+  handler(async (req, res) => {
+    const applicationId = req.params.id!;
+    await assertApplicationAccess(req, applicationId);
+
+    const application = await prisma.application.findUniqueOrThrow({
+      where: { id: applicationId },
+      select: { status: true },
+    });
+    if (application.status !== ApplicationStatus.DRAFT) {
+      throw ApiError.conflict('This application has already been submitted');
+    }
+
+    return ok(res, await prefillApplication(applicationId));
+  }),
+);
+
+const submitSchema = z.object({
+  values: z.record(z.union([z.string(), z.number(), z.null()])),
+});
+
+applicationsRouter.post(
+  '/:id/submit',
+  requireRole(Role.CITIZEN),
+  validateBody(submitSchema),
+  handler(async (req, res) => {
+    const applicationId = req.params.id!;
+    await assertApplicationAccess(req, applicationId);
+    const body = req.body as z.infer<typeof submitSchema>;
+
+    try {
+      const submitted = await submitDraftApplication({
+        applicationId,
+        values: body.values,
+        actorUserId: req.user!.id,
+      });
+      return ok(res, {
+        applicationId: submitted.id,
+        applicationNumber: submitted.applicationNumber,
+        status: submitted.status,
+      });
+    } catch (error) {
+      if (error instanceof DraftValidationError) {
+        throw ApiError.badRequest(error.message, error.fieldErrors);
+      }
+      if (error instanceof Error && error.message.includes('already been submitted')) {
+        throw ApiError.conflict(error.message);
+      }
+      throw error;
+    }
+  }),
+);
 
 const listQuerySchema = z.object({
   status: z.string().optional(),

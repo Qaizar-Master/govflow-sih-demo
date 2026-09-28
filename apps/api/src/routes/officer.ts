@@ -51,11 +51,13 @@ officerRouter.get(
           .filter((s) => valid.has(s)) as ApplicationStatus[])
       : undefined;
 
-    // Applications blocked on the citizen are excluded unless explicitly asked
-    // for: an officer cannot act on a file that is missing evidence only the
-    // applicant can supply.
+    // Two statuses an officer must never be handed:
+    //  - DRAFT, which is a half-typed form the citizen has not sent. Showing it
+    //    would put unsubmitted personal answers in front of a stranger.
+    //  - AWAITING_CITIZEN_ACTION, where the file is missing evidence only the
+    //    applicant can supply, so there is nothing yet to decide.
     const OFFICER_VISIBLE = Object.values(ApplicationStatus).filter(
-      (s) => s !== ApplicationStatus.AWAITING_CITIZEN_ACTION,
+      (s) => s !== ApplicationStatus.AWAITING_CITIZEN_ACTION && s !== ApplicationStatus.DRAFT,
     ) as ApplicationStatus[];
 
     // Scoped to the services this officer's department owns.

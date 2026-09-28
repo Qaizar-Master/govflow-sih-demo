@@ -27,14 +27,14 @@ connects to a real government system.
 
 | | |
 |---|---|
-| Tests | **137 passing** (12 files: 6 unit, 6 integration) |
+| Tests | **155 passing** (13 files: 6 unit, 7 integration) |
 | Typecheck | clean (root + web) |
 | Lint | clean, `--max-warnings 0` |
 | Docker | `docker compose up --build` boots, migrates and seeds itself |
 | Backend | ~10,260 lines TS |
 | Frontend | ~6,315 lines TS/TSX, 19 pages |
-| API | 41 documented OpenAPI paths |
-| Data model | 15 Prisma models |
+| API | 44 documented OpenAPI paths |
+| Data model | 16 Prisma models |
 | Services | 3 |
 | Connectors | 4 |
 
@@ -47,7 +47,10 @@ overclaim corrected. See §6.5.
 **Phase B** — identity binding: a simulated national identity provider, an
 OAuth client, and assertion-backed identifier links. See §6.6.
 
-Committed as `c6e0a16`.
+**Phase C** — pre-fill, the declarative form schema, the DRAFT lifecycle and
+the three-way reconciliation. **This is the USP, and it now exists.** See §6.7.
+
+Committed as `c6e0a16`, `1898396`.
 
 **Rebuild note.** Compose bakes the source into the API, worker and web images
 rather than bind-mounting it, so `docker compose restart` after a code change
@@ -473,6 +476,77 @@ abbreviated-name regression, a department that holds no record, and the
 re-bind refusal. The state guard and the re-bind guard were both confirmed by
 mutation — removing each one fails its test.
 
+### 6.7 Phase C — pre-fill and reconciliation (2026-09-28)
+
+The USP, built on the two phases beneath it.
+
+**Forms are data** (`packages/contracts/src/form-schema.ts`). Each field
+declares its `authority` and its `source` — which department, which
+common-data-model property. Pre-fill is a walk over that binding, so adding a
+service is a form definition rather than a form component. `authority` carries
+the rule the UI enforces:
+
+| | meaning |
+|---|---|
+| `REGISTRY` | the department is the authority; read-only, editing it would be a fiction |
+| `REGISTRY_CORRECTABLE` | pre-filled but correctable; divergence is reconciled |
+| `CITIZEN` | no registry holds it; the citizen is the only source |
+
+**The DRAFT lifecycle** (`packages/core/src/drafts.ts`). Pre-fill needs
+somewhere to happen: consent is recorded per application, so the citizen's
+first act is to *open* a draft, not submit one. A draft is deliberately inert —
+no workflow, no officer visibility, no SLA clock. It holds the consent ledger
+that authorises pre-fill and the snapshot of what pre-fill returned.
+
+**Pre-fill** (`packages/core/src/prefill/index.ts`) reads only, obeys the
+consent gate, and fails visibly. A department with no consent yields
+`CONSENT_REQUIRED`; one that is down yields `UNAVAILABLE` *with a note*. That
+distinction matters more than it looks: an empty box the citizen believes is
+authoritative is worse than an empty box they know is theirs to fill.
+
+**Reconciliation** (`packages/core/src/prefill/reconcile.ts`) is why any of
+this is evidence rather than convenience. Three values per field:
+
+```
+prefilled   what the registry said when the form was opened
+submitted   what the citizen actually sent
+verified    what the registry said when the workflow checked
+```
+
+Two identical-looking mismatches mean opposite things. A figure that differs
+from a registry which never moved was changed by the citizen. A figure that
+matches what they were shown, against a registry that has since moved, means
+the registry changed and the applicant did nothing wrong. Only the first
+deserves suspicion, and **an officer should never have to guess which one they
+are looking at** — which is the entire reason the snapshot is stored.
+
+Verdicts: `MATCH`, `CITIZEN_EDITED`, `REGISTRY_CHANGED`, `DIVERGENT`,
+`AWAITING_VERIFICATION`, `CITIZEN_DECLARED`, `NO_EVIDENCE`. The report returns
+`available: false` rather than an empty table for applications that predate
+pre-fill: an empty table reads as "nothing diverged", a far stronger claim than
+"nothing was checked".
+
+**Three bugs the tests and the seed caught**, all mine, all worth remembering:
+
+1. *Granting consent on a draft threw* — `setConsent` tried to resume a
+   workflow that does not exist yet. Consent on a draft authorises pre-fill and
+   nothing else.
+2. *Drafts appeared in the officer queue* — half-typed, unsent personal answers
+   in front of a stranger. `DRAFT` is now excluded from the queue, from the
+   metrics, and from direct access by id.
+3. *Unverified fields were reported `DIVERGENT`* — the workflow had not reached
+   the department yet, and the panel called that a disagreement. Manufacturing
+   findings out of steps that have not happened is how an officer learns to
+   ignore the panel. Now `AWAITING_VERIFICATION`, and it does not count toward
+   the attention badge.
+
+**Seeded**, so the officer console opens with a working reconciliation rather
+than "no pre-fill recorded" on every file. `GF-SCH-2026-00003` ships with a
+`CITIZEN_EDITED` income for the demo.
+
+18 tests in `tests/integration/prefill.test.ts`, including a real BullMQ worker
+so `verified` is genuinely fetched rather than assumed.
+
 ### Principles extracted
 
 1. **Block on objectively determinable absence; advise on subjective mismatch.**
@@ -490,6 +564,10 @@ mutation — removing each one fails its test.
 8. **Show provenance to the person it is about.** A link labelled *Demo data*
    is honest; an unlabelled one invites the reader to assume more than it
    earns.
+9. **Never manufacture a finding out of a step that has not run.** "Not yet
+   checked" and "disagrees" must be different words, or the panel gets ignored.
+10. **A draft is not a queue item.** Unsent answers belong to the person typing
+    them.
 
 ---
 
@@ -498,8 +576,8 @@ mutation — removing each one fails its test.
 | Gap | Impact |
 |---|---|
 | **No write-back.** Every connector is `GET`-only. The officer approves and nothing leaves GovFlow. | Biggest architectural hole. Makes it *feel* like a tracker. |
-| **No pre-fill.** The applicant block on `/applications/new` displays our own `Citizen` row, not live registry data. | The stated USP does not exist yet. The wording no longer overclaims (Phase A). |
-| **No form schema.** No `formSchema` anywhere; no real source exists across Indian departments today. | Needed for pre-fill. |
+| ~~No pre-fill.~~ **Closed in Phase C.** The form is answered from the registries behind the consent gate, and reconciled three ways at decision time. | The USP exists. |
+| ~~No form schema.~~ **Closed in Phase C** (`packages/contracts/src/form-schema.ts`). Residual: the field sets are ours, not transcribed from real departmental forms. | Shape is right; provenance of the fields is not yet real. |
 | ~~Identity binding is assumed.~~ **Closed in Phase B.** Signing in through the provider replaces `SEED` links with `SSO_ASSERTION` + a timestamp. Residual: the provider is simulated and `id_token` is HS256, not RS256/JWKS. | Pre-fill now has a defensible basis. |
 | **Documents stored as files on disk.** Should be a DigiLocker reference + hash. | Contradicts the stated position. |
 | **No payments.** | One named flow item. |
@@ -557,14 +635,15 @@ CDM → department     write-back   ❌ the real prize
 |---|---|---|---|
 | ~~1~~ | ~~Officer scoped to owning department~~ | done | Phase A — see §6.5 |
 | ~~2~~ | ~~Mock SSO / identity binding~~ | done | Phase B — see §6.6 |
-| 3 | Pre-fill + form schema + DRAFT flow | ~3–4h | **The USP**; requires the whole stack beneath it |
+| ~~3~~ | ~~Pre-fill + form schema + DRAFT flow~~ | done | Phase C — see §6.7 |
 | 4 | Officer time-saved metric | ~1h | Highest pitch return per hour |
 | 5 | Write-back connector | larger | Turns a viewer into infrastructure |
 | 6 | Payment step (mock treasury gateway) | ~2h | Reuses the citizen-gate pattern |
 
-Items 1 and 2 are done, so **item 3 is now unblocked and is the next work**.
-Pre-fill can rest on an asserted identifier rather than a self-declared link,
-which is precisely what made it unsafe to build earlier.
+Items 1-3 are done. **Item 5, the write-back connector, is now the largest
+remaining hole**: an officer approves and the decision still never leaves
+GovFlow, which is what keeps it feeling like a tracker rather than
+infrastructure.
 
 ---
 
@@ -606,7 +685,7 @@ Other seeded citizens: `vikram.shinde@` (name + income mismatch),
 ### Commands
 
 ```bash
-npm test                  # 137 tests
+npm test                  # 155 tests
 npm run typecheck
 npm run lint
 npm run db:seed -- --force        # wipe + reseed

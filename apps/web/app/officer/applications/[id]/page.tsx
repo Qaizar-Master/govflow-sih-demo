@@ -21,6 +21,7 @@ import {
   ConsolidatedProfile,
   DocumentsPanel,
   ExceptionsPanel,
+  ReconciliationPanel,
   SlaCard,
   ValidationPanel,
   VerificationGrid,
@@ -166,6 +167,12 @@ export default function OfficerApplicationDetail() {
           <Tabs defaultValue="evidence">
             <TabsList>
               <TabsTrigger value="evidence">Evidence</TabsTrigger>
+              <TabsTrigger value="reconciliation">
+                Form
+                {data.reconciliation.available && data.reconciliation.attentionCount > 0
+                  ? ` (${data.reconciliation.attentionCount})`
+                  : ''}
+              </TabsTrigger>
               <TabsTrigger value="issues">
                 Issues{openExceptions.length > 0 ? ` (${openExceptions.length})` : ''}
               </TabsTrigger>
@@ -177,6 +184,12 @@ export default function OfficerApplicationDetail() {
             <TabsContent value="evidence" className="space-y-4">
               <ConsolidatedProfile detail={data} />
               <VerificationGrid detail={data} />
+            </TabsContent>
+
+            {/* What the applicant was shown, what they sent, and what the
+                registries say now - the check that makes pre-fill evidence. */}
+            <TabsContent value="reconciliation" className="space-y-4">
+              <ReconciliationPanel report={data.reconciliation} />
             </TabsContent>
 
             <TabsContent value="issues" className="space-y-4">

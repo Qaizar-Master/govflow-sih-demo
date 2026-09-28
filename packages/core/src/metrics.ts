@@ -162,7 +162,12 @@ export async function platformMetrics() {
  * would see "14 awaiting review" and find four files in their list.
  */
 export async function officerMetrics(serviceTypes?: ServiceType[]) {
-  const scope = serviceTypes ? { serviceType: { in: serviceTypes as never } } : {};
+  // Drafts are excluded everywhere: they are unsent forms, so counting them
+  // would inflate a workload nobody has actually been given.
+  const scope = {
+    status: { not: ApplicationStatus.DRAFT as never },
+    ...(serviceTypes ? { serviceType: { in: serviceTypes as never } } : {}),
+  };
   const [
     total,
     requiresReview,

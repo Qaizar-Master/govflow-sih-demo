@@ -16,6 +16,7 @@ import {
   DataType,
   REPO_ROOT,
   deriveSeedIdentifier,
+  formFields,
   getServiceDefinition,
   env,
   type IdentityFacts,
@@ -891,6 +892,80 @@ async function main() {
           },
         });
       }
+    }
+
+    // ---- Pre-fill snapshot + submitted form --------------------------
+    //
+    // Seeded so the officer console opens with a working reconciliation
+    // rather than "no pre-fill recorded" on every file. The values the
+    // citizen was shown come from the same connector output the workflow
+    // used, so the two agree unless a scenario deliberately diverges.
+    {
+      const shown: Record<string, unknown> = {
+        fullName: identity?.name,
+        dateOfBirth: identity?.dateOfBirth,
+        district: identity?.district,
+        annualIncome: income?.annualIncome,
+        incomeYear: income?.incomeYear,
+        institution: education?.institution,
+        course: education?.course,
+        educationStatus: education?.educationStatus,
+      };
+
+      const sourceFor = (key: string) =>
+        ['fullName', 'dateOfBirth', 'district'].includes(key)
+          ? { departmentCode: 'IDENTITY', sourceSystem: 'IDENTITY_REGISTRY' }
+          : ['annualIncome', 'incomeYear'].includes(key)
+            ? { departmentCode: 'INCOME', sourceSystem: 'INCOME_DEPARTMENT' }
+            : { departmentCode: 'EDUCATION', sourceSystem: 'EDUCATION_DEPARTMENT' };
+
+      const schemaFields = formFields(serviceType);
+      const prefillFields = schemaFields
+        .filter((f) => f.source !== null)
+        .map((f) => {
+          const value = shown[f.key] ?? null;
+          return {
+            key: f.key,
+            label: f.label,
+            authority: f.authority,
+            value: value ?? null,
+            status: value === null || value === undefined ? 'NOT_HELD' : 'FILLED',
+            source:
+              value === null || value === undefined
+                ? null
+                : { ...sourceFor(f.key), fetchedAt: submittedAt.toISOString() },
+          };
+        });
+
+      await prisma.prefillSnapshot.create({
+        data: {
+          applicationId: application.id,
+          fields: prefillFields as never,
+          unavailable: [],
+          createdAt: submittedAt,
+        },
+      });
+
+      // What the citizen actually sent. Faithful to the snapshot, except on
+      // the mismatch scenario, where they revised the income downwards - the
+      // one case an officer genuinely has to look at.
+      const submittedValues: Record<string, unknown> = {};
+      for (const field of schemaFields) {
+        submittedValues[field.key] = field.source ? (shown[field.key] ?? null) : null;
+      }
+      if (spec.requestedAmount) submittedValues.requestedAmount = spec.requestedAmount;
+      if (serviceType === 'INCOME_CERTIFICATE') {
+        submittedValues.purpose = 'Educational scholarship';
+      }
+      if (serviceType === 'RATION_CARD') submittedValues.householdSize = 4;
+      if (spec.scenario === 'MISMATCH' && income?.annualIncome) {
+        submittedValues.annualIncome = Math.round((income.annualIncome as number) * 0.55);
+      }
+
+      await prisma.application.update({
+        where: { id: application.id },
+        data: { submittedValues: submittedValues as never },
+      });
     }
 
     // A couple of officer notes for texture

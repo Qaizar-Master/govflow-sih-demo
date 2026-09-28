@@ -271,11 +271,15 @@ model Application {
   decisionNotes     String?
   /// Latest advisory validation report (AI or rule-based).
   validationSummary Json?
+  /// The form values the citizen actually submitted, keyed by form-schema field.
+  /// Held so the decision can be reconciled against what the registries said.
+  submittedValues Json?
 
   citizen   Citizen @relation(fields: [citizenId], references: [id], onDelete: Cascade)
   decidedBy User?   @relation("ApplicationDecider", fields: [decidedById], references: [id])
 
   workflow          WorkflowInstance?
+  prefillSnapshot   PrefillSnapshot?
   consents          Consent[]
   documents         Document[]
   exceptions        Exception[]
@@ -290,6 +294,25 @@ model Application {
   @@index([citizenId])
   @@index([status])
   @@index([submittedAt])
+}
+
+/// What the registries said at the moment the form was pre-filled.
+///
+/// Kept separate from the verification-time NormalizedRecord on purpose. The
+/// two are fetched at different moments and answer different questions: this
+/// one is *what the citizen was shown*, the other is *what was true when the
+/// decision was made*. Collapsing them would destroy the only evidence that
+/// distinguishes a stale registry from an altered claim.
+model PrefillSnapshot {
+  id            String   @id @default(cuid())
+  applicationId String   @unique
+  /// field key -> { value, departmentCode, sourceSystem, fetchedAt }
+  fields        Json
+  /// Departments that could not be reached or were not consented to.
+  unavailable   String[]
+  createdAt     DateTime @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 }
 
 model WorkflowInstance {

@@ -56,6 +56,14 @@ requires every department to surrender ownership of its data.
   through the codebase. A new department is a connector plus a mapping.
 - **Common data model** — Zod-validated, with per-field provenance so an officer can see
   which system asserted what.
+- **Pre-fill with reconciliation** — the citizen's form comes back answered from the
+  registries that already hold the data, each value attributed to the department that
+  asserted it. At decision time the officer sees three columns: what the applicant was
+  shown, what they submitted, and what the registry says now — so a value the citizen
+  changed is distinguishable from a registry that has since moved.
+- **Declarative forms** — a service's form is data (`packages/contracts/src/form-schema.ts`),
+  not a component. Each field declares which department and which common-data-model
+  property fills it; pre-fill is a walk over that binding.
 - **Identity binding via SSO** — a simulated national identity provider ("MeriPehchaan")
   asserts who the citizen is and how each department keys them. GovFlow never sees a
   password, and every departmental identifier it holds records who vouched for it.
@@ -421,7 +429,7 @@ Also available: **Test connector** (probe a department and see raw beside normal
 ## 17. Testing
 
 ```bash
-npm test              # 137 tests
+npm test              # 155 tests
 npm run typecheck     # every workspace, including the web app
 npm run lint
 ```
@@ -437,8 +445,10 @@ authentication; RBAC across all three roles; consent gating; application creatio
 transitions; retry behaviour with a real BullMQ worker; exception creation; officer
 department scoping; the identifier crosswalk and its non-retryable failure when a link is
 absent; the full SSO round trip including replayed codes, forged state and unregistered
-redirect URIs; and an end-to-end run from submission through four departments to officer
-approval.
+redirect URIs; the draft/pre-fill/submit lifecycle including the consent gate, a department
+outage during pre-fill and per-field submission validation; every reconciliation verdict,
+including the distinction between a citizen edit and a registry that moved; and an
+end-to-end run from submission through four departments to officer approval.
 
 ## 18. Troubleshooting
 

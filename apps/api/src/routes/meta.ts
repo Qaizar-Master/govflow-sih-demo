@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { DEPARTMENTS, SERVICES, env } from '@govflow/contracts';
+import { DEPARTMENTS, FORM_SCHEMAS, SERVICES, env } from '@govflow/contracts';
 import { prisma } from '@govflow/core';
 import { handler } from '../lib/async-handler.js';
 import { ok } from '../lib/respond.js';
@@ -72,6 +72,8 @@ metaRouter.get('/meta/services', (_req, res) => {
       consentScopes: service.consentScopes,
       policy: service.policy,
       steps: service.steps,
+      /** The declarative form. Pre-fill walks this to answer it. */
+      formSchema: FORM_SCHEMAS.find((f) => f.serviceType === service.serviceType) ?? null,
       // The headline: no service needs a connector of its own.
       departmentsUsed: [
         ...new Set(service.steps.map((s) => s.departmentCode).filter(Boolean)),

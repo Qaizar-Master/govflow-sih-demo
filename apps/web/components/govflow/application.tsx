@@ -40,6 +40,8 @@ import type {
   ConsentRecord,
   DocumentRecord,
   ExceptionRecord,
+  ReconciliationReport,
+  ReconciliationVerdict,
   TimelineEntry,
   ValidationReport,
 } from '@/lib/types';
@@ -704,6 +706,181 @@ export function AuditTable({ entries }: { entries: ApplicationDetail['auditTrail
             ) : null}
           </tbody>
         </table>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * RECONCILIATION PANEL
+ *
+ * The screen that makes pre-fill defensible rather than merely convenient.
+ * Three columns because two would collapse the distinction that matters: a
+ * value the citizen changed and a registry that moved since look identical
+ * unless you can see what the citizen was actually shown.
+ */
+const VERDICT_STYLE: Record<
+  ReconciliationVerdict,
+  { label: string; tone: string; dot: string }
+> = {
+  MATCH: {
+    label: 'Matches registry',
+    tone: 'text-emerald-700 dark:text-emerald-400',
+    dot: 'bg-emerald-500',
+  },
+  CITIZEN_EDITED: {
+    label: 'Changed by applicant',
+    tone: 'text-amber-700 dark:text-amber-400',
+    dot: 'bg-amber-500',
+  },
+  REGISTRY_CHANGED: {
+    label: 'Registry changed since',
+    tone: 'text-sky-700 dark:text-sky-400',
+    dot: 'bg-sky-500',
+  },
+  DIVERGENT: {
+    label: 'All three differ',
+    tone: 'text-destructive',
+    dot: 'bg-destructive',
+  },
+  AWAITING_VERIFICATION: {
+    label: 'Not yet verified',
+    tone: 'text-muted-foreground',
+    dot: 'bg-muted-foreground/50',
+  },
+  CITIZEN_DECLARED: {
+    label: 'Declared by applicant',
+    tone: 'text-muted-foreground',
+    dot: 'bg-muted-foreground/50',
+  },
+  NO_EVIDENCE: {
+    label: 'No registry value',
+    tone: 'text-muted-foreground',
+    dot: 'bg-muted-foreground/50',
+  },
+};
+
+function cell(value: string | number | null): string {
+  if (value === null || value === undefined || value === '') return '—';
+  return typeof value === 'number' ? value.toLocaleString('en-IN') : String(value);
+}
+
+export function ReconciliationPanel({ report }: { report: ReconciliationReport }) {
+  if (!report.available) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Reconciliation</CardTitle>
+          <CardDescription>
+            This application was submitted without pre-fill, so there is nothing recorded
+            about what the applicant was shown.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Deliberately not an empty table: "nothing was checked" is a very
+              different claim from "nothing diverged". */}
+          <Alert variant="warning">
+            No reconciliation is available for this application. Every value must be checked
+            against the evidence tab by hand.
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const attention = report.rows.filter(
+    (r) => r.verdict === 'CITIZEN_EDITED' || r.verdict === 'DIVERGENT',
+  );
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <ShieldCheck className="h-4 w-4 text-primary" />
+          Reconciliation
+        </CardTitle>
+        <CardDescription>
+          What the registries said when the form was filled, what the applicant submitted,
+          and what the registries say now.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {attention.length === 0 ? (
+          <div className="flex items-start gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+            <p>
+              <strong>{report.matchedCount} field(s) match the department records.</strong>{' '}
+              Nothing was re-keyed or altered.
+            </p>
+          </div>
+        ) : (
+          <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <div>
+              <p>
+                <strong>
+                  {attention.length} field(s) differ from the department record.
+                </strong>
+              </p>
+              <ul className="mt-1 list-disc space-y-0.5 pl-4 text-muted-foreground">
+                {attention.map((row) => (
+                  <li key={row.key}>
+                    {row.label}: {row.explanation}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                <th className="pb-2 font-medium">Field</th>
+                <th className="pb-2 font-medium">Shown to applicant</th>
+                <th className="pb-2 font-medium">Submitted</th>
+                <th className="pb-2 font-medium">Registry now</th>
+                <th className="pb-2 font-medium">Verdict</th>
+              </tr>
+            </thead>
+            <tbody>
+              {report.rows.map((row) => {
+                const style = VERDICT_STYLE[row.verdict];
+                const changed =
+                  row.verdict === 'CITIZEN_EDITED' || row.verdict === 'DIVERGENT';
+                return (
+                  <tr key={row.key} className="border-b border-border/60 align-top">
+                    <td className="py-2">
+                      <span className="font-medium">{row.label}</span>
+                      {row.departmentCode ? (
+                        <span className="block text-[11px] text-muted-foreground">
+                          {row.departmentCode}
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="py-2 text-muted-foreground">{cell(row.prefilled)}</td>
+                    <td className={cn('py-2', changed && 'font-semibold text-amber-700 dark:text-amber-400')}>
+                      {cell(row.submitted)}
+                    </td>
+                    <td className="py-2 text-muted-foreground">{cell(row.verified)}</td>
+                    <td className="py-2">
+                      <span className={cn('flex items-center gap-1.5 text-xs', style.tone)}>
+                        <span className={cn('h-1.5 w-1.5 rounded-full', style.dot)} />
+                        {style.label}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          GovFlow reports these differences; it does not decide what they mean. A changed
+          value may be a correction to an out-of-date assessment.
+        </p>
       </CardContent>
     </Card>
   );

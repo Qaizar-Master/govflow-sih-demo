@@ -40,6 +40,7 @@ export async function resetDatabase(): Promise<void> {
   await prisma.workflowStep.deleteMany();
   await prisma.workflowInstance.deleteMany();
   await prisma.consent.deleteMany();
+  await prisma.prefillSnapshot.deleteMany();
   await prisma.application.deleteMany();
   await prisma.identifierLink.deleteMany();
   await prisma.user.deleteMany();
