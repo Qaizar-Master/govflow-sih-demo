@@ -18,12 +18,44 @@ Wait for `govflow-api` to log `starting API`, then open **http://localhost:3000*
 | Officer (Revenue) | `officer2@govflow.gov.in` | `Password@123` |
 | Admin | `admin@govflow.gov.in` | `Password@123` |
 
+Or click **Continue with MeriPehchaan (Simulated)** to sign in through the simulated
+identity provider — no password, and it links the citizen's departmental identifiers
+(see Demo 0). The two officers deliberately see **different queues**: Education owns
+scholarships, Revenue owns income certificates and ration cards.
+
 The login page lists these and fills them in on click. Rohan Prajapati is deliberately the
 only seeded citizen **without** an application — he is the live-demo account.
 
 Useful second tab: **http://localhost:4000/docs** (Swagger UI).
 
 > Say this once, early: *every department here is simulated and holds synthetic data.*
+
+---
+
+## Demo 0 — Sign in through the identity provider (≈1 min)
+
+**Point:** GovFlow is told how each department keys this citizen. It never guesses, and it
+never sees a password.
+
+1. On the login page, click **Continue with MeriPehchaan (Simulated)**.
+2. You land on a visibly different site — a simulated national identity provider. It names
+   what GovFlow is asking for: identity, date of birth, district, and the citizen's
+   identifiers at four systems. Pick **Rohan Prajapati**.
+3. You are returned signed in. Open **Profile → How departments identify you**.
+
+| Department | Their identifier | Source |
+|---|---|---|
+| IDENTITY | `CIT-1001` | Verified by MeriPehchaan |
+| INCOME | `INC-1001` | Verified by MeriPehchaan |
+| EDUCATION | `STU-1001` | Verified by MeriPehchaan |
+| LEGACY | `CIT-1001` | Verified by MeriPehchaan |
+
+**What to say:** *"Four departments, four different numbers for one person. GovFlow doesn't
+derive these from each other — real keyspaces don't line up. It's told them, and it records
+who said so and when. That's what makes the next screen legitimate rather than a guess."*
+
+If you sign in with the password instead, the same panel reads **Demo data** with no
+verification date, and says so in a warning. That contrast is worth showing.
 
 ---
 

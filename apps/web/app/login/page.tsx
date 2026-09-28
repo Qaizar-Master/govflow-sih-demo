@@ -47,11 +47,27 @@ const SSO_ERRORS: Record<string, string> = {
   already_bound: 'That registry identity is already linked to a different account.',
 };
 
+/**
+ * Reads the `?sso=` bounce reason.
+ *
+ * Isolated into its own component because `useSearchParams` opts whatever
+ * contains it out of server rendering. Wrapping the whole page cost the login
+ * form its server-rendered HTML and flashed an empty screen until hydration;
+ * confining it to this notice keeps the form static.
+ */
+function SsoErrorNotice() {
+  const reason = useSearchParams().get('sso');
+  if (!reason) return null;
+  return (
+    <Alert variant="destructive">
+      {SSO_ERRORS[reason] ?? 'Sign-in through the identity provider failed.'}
+    </Alert>
+  );
+}
+
 function LoginScreen() {
   const { login, user, loading } = useAuth();
   const router = useRouter();
-  const params = useSearchParams();
-  const ssoError = params.get('sso');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState(DEMO_PASSWORD);
   const [error, setError] = React.useState<string | null>(null);
@@ -153,12 +169,13 @@ function LoginScreen() {
                 />
               </div>
 
-              {error ? <Alert variant="destructive">{error}</Alert> : null}
-              {!error && ssoError ? (
-                <Alert variant="destructive">
-                  {SSO_ERRORS[ssoError] ?? 'Sign-in through the identity provider failed.'}
-                </Alert>
-              ) : null}
+              {error ? (
+                <Alert variant="destructive">{error}</Alert>
+              ) : (
+                <React.Suspense fallback={null}>
+                  <SsoErrorNotice />
+                </React.Suspense>
+              )}
 
               <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
@@ -236,14 +253,6 @@ function LoginScreen() {
   );
 }
 
-/**
- * `useSearchParams` forces this page out of static generation unless it sits
- * behind a Suspense boundary, and the production build fails without one.
- */
 export default function LoginPage() {
-  return (
-    <React.Suspense fallback={<main className="min-h-screen bg-background" />}>
-      <LoginScreen />
-    </React.Suspense>
-  );
+  return <LoginScreen />;
 }

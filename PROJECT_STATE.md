@@ -27,22 +27,27 @@ connects to a real government system.
 
 | | |
 |---|---|
-| Tests | **122 passing** (11 files: 6 unit, 5 integration) |
+| Tests | **137 passing** (12 files: 6 unit, 6 integration) |
 | Typecheck | clean (root + web) |
 | Lint | clean, `--max-warnings 0` |
 | Docker | `docker compose up --build` boots, migrates and seeds itself |
 | Backend | ~10,260 lines TS |
 | Frontend | ~6,315 lines TS/TSX, 19 pages |
-| API | 38 documented OpenAPI paths |
+| API | 41 documented OpenAPI paths |
 | Data model | 15 Prisma models |
 | Services | 3 |
 | Connectors | 4 |
 
-### Phase A applied (2026-09-18)
+### Phases A and B applied (2026-09-18 → 09-28)
 
-Three coherence fixes landed: officers are scoped to their department's
-services, the identifier crosswalk is stored rather than derived, and the
-pre-fill overclaim on `/applications/new` is corrected. See §6.5.
+**Phase A** — three coherence fixes: officers scoped to their department's
+services, the identifier crosswalk stored rather than derived, the pre-fill
+overclaim corrected. See §6.5.
+
+**Phase B** — identity binding: a simulated national identity provider, an
+OAuth client, and assertion-backed identifier links. See §6.6.
+
+Committed as `c6e0a16`.
 
 **Rebuild note.** Compose bakes the source into the API, worker and web images
 rather than bind-mounting it, so `docker compose restart` after a code change
@@ -407,6 +412,67 @@ and note all return 404; all four connectors resolve through stored links
 every department lookup and parks correctly at the document gate. 10 new tests
 in `tests/integration/department-scope.test.ts`; suite 103 → 122.
 
+### 6.6 Phase B — identity binding (2026-09-28)
+
+Phase A made the crosswalk *storable*. Phase B makes it *trustworthy*: the
+identifiers now arrive from the party that actually knows them.
+
+**The simulated provider** (`services/mock-departments/src/sso.ts`) —
+"MeriPehchaan (Simulated)". It shares a process with the departments for the
+same reason they share one with each other: a demo should not need six
+containers. Implements authorization code, token exchange, userinfo and
+discovery, with a server-rendered account chooser, single-use codes and a
+`redirect_uri` allowlist.
+
+Stated simplifications, so nobody mistakes it for a real integration:
+- `id_token` is HS256 with the client secret. Real MeriPehchaan and DigiLocker
+  sign RS256 and publish a JWKS. The *verification shape* is the same; the key
+  management is not.
+- No password. Authenticating a fake person proves nothing.
+- `userinfo` returns departmental identifiers directly. In production this is
+  closer to DigiLocker's issued-documents list, where the citizen consents to
+  share each issuer's reference. **The point that survives the simplification:
+  the identity provider is what knows how a person is keyed across
+  departments — GovFlow must be told, not guess.**
+
+**The client** (`apps/api/src/routes/sso.ts`). GovFlow is the relying party,
+not the authority:
+- CSRF state is a signed JWT, not a stored session — nothing to expire.
+- The `id_token` signature is verified, *and* the `userinfo` subject is
+  cross-checked against it. Two halves of one exchange must be about one
+  person.
+- The session token is returned in the URL **fragment**, so it never reaches a
+  server log or a `Referer` header.
+- Failures redirect to `/login?sso=<reason>`. A citizen mid-journey in a
+  browser is not served by a JSON error body, and nothing from the provider is
+  echoed into the URL.
+
+**The binding** (`packages/core/src/identity/sso.ts`). `bindIdentityAssertion`
+writes each asserted identifier as `SSO_ASSERTION` with a timestamp, and
+**refuses** to re-bind a registry identity already held by a different subject.
+Two assertions claiming one person is the shape of an account takeover; the
+safe answer is to stop, not to reassign. It is idempotent on repeat sign-in.
+
+**One real bug, worth remembering.** The provider first correlated departments
+by matching on name. That silently dropped CIT-1001's Education link, because
+the Education registry knows him as `Rohan P.` — the deliberate mismatch the
+whole demo is built around. Two things were wrong at once: the linking failed
+for the demo's own protagonist, and had it succeeded it would have quietly
+resolved the very discrepancy the validation layer exists to surface. Replaced
+with an explicit enrolment register that the provider legitimately owns, plus a
+boot-time audit that warns if the register drifts from the datasets.
+
+**Visible provenance.** `GET /api/auth/me/identifiers` and a profile panel show
+each department's identifier and where it came from: *Demo data* (synthetic,
+no assurance, with a warning) versus *Verified by MeriPehchaan* with a date.
+Provenance nobody can see is provenance nobody checks.
+
+15 tests in `tests/integration/sso.test.ts` covering the round trip, replayed
+codes, forged state, unregistered redirect URIs, wrong client secret, the
+abbreviated-name regression, a department that holds no record, and the
+re-bind refusal. The state guard and the re-bind guard were both confirmed by
+mutation — removing each one fails its test.
+
 ### Principles extracted
 
 1. **Block on objectively determinable absence; advise on subjective mismatch.**
@@ -418,6 +484,12 @@ in `tests/integration/department-scope.test.ts`; suite 103 → 122.
    from. A link with no provenance is a guess wearing a table.
 6. **Refuse a misconfigured account; never widen it.** Missing scope means no
    access, not total access.
+7. **Correlate on identifiers, never on names.** Name matching failed on the
+   one record the demo is built around, and would have hidden the mismatch the
+   product exists to find.
+8. **Show provenance to the person it is about.** A link labelled *Demo data*
+   is honest; an unlabelled one invites the reader to assume more than it
+   earns.
 
 ---
 
@@ -428,9 +500,9 @@ in `tests/integration/department-scope.test.ts`; suite 103 → 122.
 | **No write-back.** Every connector is `GET`-only. The officer approves and nothing leaves GovFlow. | Biggest architectural hole. Makes it *feel* like a tracker. |
 | **No pre-fill.** The applicant block on `/applications/new` displays our own `Citizen` row, not live registry data. | The stated USP does not exist yet. The wording no longer overclaims (Phase A). |
 | **No form schema.** No `formSchema` anywhere; no real source exists across Indian departments today. | Needed for pre-fill. |
-| **Identity binding is assumed.** We trust our own `User.citizenId` link. Every `IdentifierLink` is `source: SEED`, which is honest but carries no assurance. | Pre-filling on an unverified binding is a data-leak shape, not just untidy. The crosswalk is now recorded and attributed (Phase A), so this gap is visible rather than hidden — but it is not closed. |
+| ~~Identity binding is assumed.~~ **Closed in Phase B.** Signing in through the provider replaces `SEED` links with `SSO_ASSERTION` + a timestamp. Residual: the provider is simulated and `id_token` is HS256, not RS256/JWKS. | Pre-fill now has a defensible basis. |
 | **Documents stored as files on disk.** Should be a DigiLocker reference + hash. | Contradicts the stated position. |
-| **No SSO, no payments.** | Two named PS/flow items. |
+| **No payments.** | One named flow item. |
 | **Gemini path never exercised.** No key was ever configured. | Unverified. Rule path is what the tests prove. |
 | **AI privacy question unresolved.** Enabling Gemini sends name, DOB, district, income, institution to a third-party API. | Parked, not answered. |
 | No jurisdiction/district scoping, no multi-level approval, no grievances, no MDM dedupe, no rate limiting, JWTs in `localStorage`, `prisma db push` not migrations. | Prototype limitations, documented in README §19. |
@@ -484,14 +556,15 @@ CDM → department     write-back   ❌ the real prize
 | # | Work | Effort | Why |
 |---|---|---|---|
 | ~~1~~ | ~~Officer scoped to owning department~~ | done | Phase A — see §6.5 |
-| 2 | Mock SSO / identity binding | ~2–3h | Prerequisite for *safe* pre-fill. Now has somewhere to land: it populates `IdentifierLink` with `source: SSO_ASSERTION` |
+| ~~2~~ | ~~Mock SSO / identity binding~~ | done | Phase B — see §6.6 |
 | 3 | Pre-fill + form schema + DRAFT flow | ~3–4h | **The USP**; requires the whole stack beneath it |
 | 4 | Officer time-saved metric | ~1h | Highest pitch return per hour |
 | 5 | Write-back connector | larger | Turns a viewer into infrastructure |
 | 6 | Payment step (mock treasury gateway) | ~2h | Reuses the citizen-gate pattern |
 
-2-before-3 is the correct engineering order. 3-before-2 is defensible for demo
-value, but the identity caveat must then be stated out loud.
+Items 1 and 2 are done, so **item 3 is now unblocked and is the next work**.
+Pre-fill can rest on an asserted identifier rather than a self-declared link,
+which is precisely what made it unsafe to build earlier.
 
 ---
 
@@ -533,7 +606,7 @@ Other seeded citizens: `vikram.shinde@` (name + income mismatch),
 ### Commands
 
 ```bash
-npm test                  # 122 tests
+npm test                  # 137 tests
 npm run typecheck
 npm run lint
 npm run db:seed -- --force        # wipe + reseed

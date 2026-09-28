@@ -172,6 +172,45 @@ enforced in Express middleware, never in the browser.`,
         responses: { 200: okResponse('Session identity'), 401: errorResponse },
       },
     },
+    '/api/auth/me/identifiers': {
+      get: {
+        tags: ['Auth'],
+        summary: "The citizen's departmental identifiers and the provenance of each",
+        description:
+          'Each department keys the citizen differently. GovFlow stores that mapping rather than deriving it, and records how each link was established: SEED (synthetic demo data, no assurance), SSO_ASSERTION (vouched for by the identity provider) or OFFICER_ASSERTED.',
+        responses: { 200: okResponse('Identifier links with source and verification time'), 401: errorResponse },
+      },
+    },
+    '/api/auth/sso/start': {
+      get: {
+        tags: ['Auth'],
+        summary: 'Begin sign-in through the simulated identity provider',
+        description:
+          'Redirects (302) to the provider with a signed CSRF state. GovFlow is the relying party here and never receives a password.',
+        parameters: [
+          {
+            name: 'returnTo',
+            in: 'query',
+            schema: { type: 'string', default: '/dashboard' },
+            description: 'Path to land on after sign-in.',
+          },
+        ],
+        responses: { 302: { description: 'Redirect to the identity provider' } },
+      },
+    },
+    '/api/auth/sso/callback': {
+      get: {
+        tags: ['Auth'],
+        summary: 'Exchange the authorization code and bind the assertion',
+        description:
+          "Verifies the state and the id_token, cross-checks the userinfo subject against it, then records each asserted departmental identifier as SSO_ASSERTION. On success redirects to the frontend with the session token in the URL fragment, so it never reaches a server log or a Referer header. On failure redirects to /login?sso=<reason>.",
+        parameters: [
+          { name: 'code', in: 'query', schema: { type: 'string' } },
+          { name: 'state', in: 'query', schema: { type: 'string' } },
+        ],
+        responses: { 302: { description: 'Redirect to the frontend, or back to /login with a reason' } },
+      },
+    },
     '/api/applications': {
       get: {
         tags: ['Applications'],

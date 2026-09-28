@@ -56,6 +56,13 @@ requires every department to surrender ownership of its data.
   through the codebase. A new department is a connector plus a mapping.
 - **Common data model** — Zod-validated, with per-field provenance so an officer can see
   which system asserted what.
+- **Identity binding via SSO** — a simulated national identity provider ("MeriPehchaan")
+  asserts who the citizen is and how each department keys them. GovFlow never sees a
+  password, and every departmental identifier it holds records who vouched for it.
+- **Stored identifier crosswalk** — departmental keyspaces are independent, so the mapping
+  from `CIT-1001` to `INC-1001` is looked up and attributed, never derived from the string.
+- **Officer scoping** — officers see only the services their own department owns; a Revenue
+  officer cannot open, annotate or decide a scholarship.
 - **Consent gate** — no department is contacted without a recorded, purpose-bound consent.
   With consent outstanding the workflow genuinely suspends and makes zero calls.
 - **Async orchestration** — BullMQ. `POST /applications` returns in milliseconds; a slow
@@ -204,6 +211,9 @@ is only needed for local (non-Docker) runs, since Compose passes its own environ
 | `NEXT_PUBLIC_API_URL` | `http://localhost:4000` | API base baked into the browser bundle |
 | `IDENTITY_API_URL` / `INCOME_API_URL` / `EDUCATION_API_URL` | `http://localhost:5001` | Simulated departments |
 | `IDENTITY_API_KEY` / `INCOME_API_TOKEN` / `EDUCATION_BASIC_USER` / `EDUCATION_BASIC_PASS` | demo values | Per-department credentials |
+| `SSO_AUTHORIZE_URL` | `http://localhost:5001/sso` | Where the **browser** is sent |
+| `SSO_INTERNAL_URL` | `http://localhost:5001/sso` | Where the **API** exchanges the code (differs under Compose) |
+| `SSO_CLIENT_ID` / `SSO_CLIENT_SECRET` | demo values | Relying-party credentials |
 | `LEGACY_CSV_PATH` | `./data/legacy/beneficiaries.csv` | Legacy export |
 | `CONNECTOR_TIMEOUT_MS` | `4000` | Per-department timeout |
 | `WORKFLOW_MAX_ATTEMPTS` | `3` | Retries before an exception |
@@ -411,7 +421,7 @@ Also available: **Test connector** (probe a department and see raw beside normal
 ## 17. Testing
 
 ```bash
-npm test              # 82 tests
+npm test              # 137 tests
 npm run typecheck     # every workspace, including the web app
 npm run lint
 ```
@@ -424,8 +434,11 @@ that infrastructure is absent.
 Covered: connector transformation and the common data model; the mapping engine; retryable
 vs non-retryable classification; document extraction; SLA states; mismatch detection;
 authentication; RBAC across all three roles; consent gating; application creation; workflow
-transitions; retry behaviour with a real BullMQ worker; exception creation; and an
-end-to-end run from submission through four departments to officer approval.
+transitions; retry behaviour with a real BullMQ worker; exception creation; officer
+department scoping; the identifier crosswalk and its non-retryable failure when a link is
+absent; the full SSO round trip including replayed codes, forged state and unregistered
+redirect URIs; and an end-to-end run from submission through four departments to officer
+approval.
 
 ## 18. Troubleshooting
 
