@@ -124,6 +124,39 @@ so we store it."*
 
 ---
 
+## Demo 1c — The decision leaves GovFlow (≈2 min)
+
+**Point:** GovFlow is not where the decision lives. It is how the decision gets to where it
+does live.
+
+1. As the **Education officer**, approve any application in the queue.
+2. Stay on the application. Within a second or two an **Recorded with the department**
+   panel appears on the Evidence tab:
+
+   > **Department of Higher Education (Simulated)** · Recorded
+   > Their reference `EDU/SCH/2026/00001`
+
+3. Prove it is really there — in a terminal:
+
+```bash
+curl -s localhost:5001/api/__decisions | python3 -m json.tool
+```
+
+The department holds the sanction under **its own** reference, against **its own**
+identifier for the citizen (`STU-1001`), with the officer recorded as an opaque
+`GF-OFF-…` handle rather than a name.
+
+**The line that lands:** *"That reference is the one that matters. If GovFlow were deleted
+tomorrow, the sanction would still exist — in the department authorised to grant it. We
+hold coordination, never custody."*
+
+**Show the failure too.** Set the Education Department to fail in the admin console, then
+approve another application. The decision is still `APPROVED` and final; the panel reads
+**Not delivered**, with the retry count and an officer exception raised. A departmental
+outage never turns into an undecided applicant.
+
+---
+
 ## Demo 2 — Data mismatch (≈1 min)
 
 **Point:** GovFlow detects disagreement between departments — and grades it.

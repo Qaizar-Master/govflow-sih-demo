@@ -1,5 +1,6 @@
 import type { ConnectorType, DataType, DepartmentStatus } from './enums.js';
 import type { NormalizedRecord } from './common-data-model.js';
+import type { DecisionAcknowledgement, DecisionSubmission } from './decision.js';
 
 export interface HealthStatus {
   connector: string;
@@ -55,6 +56,29 @@ export interface DepartmentConnector {
   validate(data: unknown): ValidationResult;
   /** fetch -> validate -> transform -> quality check, as one auditable unit. */
   ingest(identifier: string): Promise<ConnectorFetchOutcome>;
+
+  /**
+   * Whether this department can receive a decision at all.
+   *
+   * Not every system can. A nightly CSV export has no inbox, and pretending
+   * otherwise would be the sort of convenient fiction this project exists to
+   * avoid - so the capability is declared, and the workflow degrades visibly
+   * when it is absent rather than silently dropping the decision.
+   */
+  canReceiveDecisions(): boolean;
+
+  /**
+   * Hands a decision to the department that owns the outcome and returns
+   * *their* reference for it.
+   *
+   * `idempotencyKey` is required, not optional: this call is the one place
+   * GovFlow causes an effect in someone else's system, and a retry after a
+   * timeout must not sanction the same application twice.
+   */
+  submitDecision(
+    submission: DecisionSubmission,
+    idempotencyKey: string,
+  ): Promise<DecisionAcknowledgement>;
 }
 
 export const CONNECTOR_ERROR_KIND = {
@@ -73,6 +97,11 @@ export const CONNECTOR_ERROR_KIND = {
    * waited for.
    */
   IDENTIFIER_NOT_LINKED: 'IDENTIFIER_NOT_LINKED',
+  /**
+   * The department has no inbox - a CSV export cannot be written to. Not
+   * retryable: no amount of waiting grows an API.
+   */
+  WRITE_NOT_SUPPORTED: 'WRITE_NOT_SUPPORTED',
   UNKNOWN: 'UNKNOWN',
 } as const;
 export type ConnectorErrorKind =

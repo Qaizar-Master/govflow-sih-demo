@@ -2,6 +2,7 @@ import {
   ApplicationStatus,
   AuditAction,
   ConsentStatus,
+  DeliveryStatus,
   ExceptionStatus,
   ExceptionType,
   FINDING_KIND,
@@ -49,6 +50,8 @@ export function jobNameForStep(stepType: StepType): string {
       return JOB_NAMES.DOCUMENT_VALIDATION;
     case StepType.DATA_QUALITY_CHECK:
       return JOB_NAMES.DATA_QUALITY_CHECK;
+    case StepType.DEPARTMENT_WRITE_BACK:
+      return JOB_NAMES.DEPARTMENT_WRITE_BACK;
     default:
       return JOB_NAMES.RUN_STEP;
   }
@@ -196,10 +199,17 @@ export async function runStep(input: RunStepInput): Promise<StepOutcome> {
   const step = application.workflow.steps.find((s) => s.stepType === stepType);
   if (!step) throw new Error(`Step ${stepType} not present on ${applicationId}`);
 
-  // A decided application never runs more automation.
+  // A decided application runs no further *verification*: a stray queued job
+  // must not re-open a file an officer has closed.
+  //
+  // Write-back is the deliberate exception, and the only one. Its entire
+  // purpose is to run after the decision - it is how the decision leaves
+  // GovFlow - so excluding it here would silently strand every approval in
+  // the one place it must not stop.
   if (
-    application.status === ApplicationStatus.APPROVED ||
-    application.status === ApplicationStatus.REJECTED
+    stepType !== StepType.DEPARTMENT_WRITE_BACK &&
+    (application.status === ApplicationStatus.APPROVED ||
+      application.status === ApplicationStatus.REJECTED)
   ) {
     return { result: 'COMPLETED', nextStep: null };
   }
@@ -549,8 +559,170 @@ async function dispatchStep(stepType: StepType, ctx: StepContext): Promise<Handl
       return handleDocumentValidation(ctx);
     case StepType.DATA_QUALITY_CHECK:
       return handleDataQuality(ctx);
+    case StepType.DEPARTMENT_WRITE_BACK:
+      return handleWriteBack(ctx);
     default:
       throw new Error(`Step ${stepType} is not executed automatically`);
+  }
+}
+
+/**
+ * Hands the officer's decision to the department that owns the outcome.
+ *
+ * This is the only place GovFlow causes an effect in another system, so three
+ * things are non-negotiable:
+ *
+ *   1. The idempotency key is derived from the application and stored, not
+ *      generated per attempt. A retry after a timeout must reach the same row
+ *      in the department's system, not create a second sanction.
+ *   2. Delivery is recorded separately from the decision. The officer decided;
+ *      whether the department has been told yet is a different fact, and
+ *      conflating them would let an outage look like an undecided application.
+ *   3. A department with no inbox is NOT_SUPPORTED, not FAILED. Retrying will
+ *      never grow it an API; this needs a human, and saying so is the honest
+ *      answer.
+ */
+async function handleWriteBack(ctx: StepContext): Promise<HandlerResult> {
+  const service = getServiceDefinition(ctx.serviceType);
+  const code = service.owningDepartment;
+
+  const application = await prisma.application.findUniqueOrThrow({
+    where: { id: ctx.applicationId },
+    select: {
+      status: true,
+      decisionAt: true,
+      decidedById: true,
+      decisionNotes: true,
+      requestedAmount: true,
+    },
+  });
+
+  const approved = application.status === ApplicationStatus.APPROVED;
+  if (!approved && application.status !== ApplicationStatus.REJECTED) {
+    // Nothing has been decided, so there is nothing to deliver.
+    return { kind: 'DONE', output: { skipped: 'no decision recorded' } };
+  }
+
+  // Stable across every attempt: the key IS the application's identity here.
+  const idempotencyKey = `govflow:${ctx.applicationNumber}:${code}`;
+  const existing = await prisma.departmentAcknowledgement.findUnique({
+    where: { applicationId_departmentCode: { applicationId: ctx.applicationId, departmentCode: code } },
+  });
+  if (existing && existing.status === DeliveryStatus.DELIVERED) {
+    return {
+      kind: 'DONE',
+      output: { departmentReference: existing.departmentReference, alreadyDelivered: true },
+    };
+  }
+
+  const acknowledgement = await prisma.departmentAcknowledgement.upsert({
+    where: { applicationId_departmentCode: { applicationId: ctx.applicationId, departmentCode: code } },
+    create: { applicationId: ctx.applicationId, departmentCode: code, idempotencyKey },
+    update: { attempts: { increment: 1 } },
+  });
+
+  const connector = await getConnector(code, { applicationId: ctx.applicationId });
+
+  if (!connector.canReceiveDecisions()) {
+    await prisma.departmentAcknowledgement.update({
+      where: { id: acknowledgement.id },
+      data: {
+        status: DeliveryStatus.NOT_SUPPORTED as never,
+        lastError: `${getDepartmentDefinition(code).name} exposes no write channel.`,
+      },
+    });
+    await raiseException({
+      applicationId: ctx.applicationId,
+      workflowStepId: ctx.stepId,
+      type: ExceptionType.CONNECTOR_FAILURE,
+      severity: Severity.MEDIUM,
+      message: `${getDepartmentDefinition(code).name} cannot receive decisions electronically. This decision must be recorded manually.`,
+      details: { departmentCode: code, applicationNumber: ctx.applicationNumber },
+    });
+    await notifyRole(
+      [Role.OFFICER],
+      'Decision needs manual recording',
+      `${ctx.applicationNumber} was decided, but ${getDepartmentDefinition(code).name} has no electronic inbox.`,
+      ctx.applicationId,
+      NotificationType.WARNING,
+    );
+    // The workflow continues: the decision stands, and the gap is visible
+    // rather than silently pending forever.
+    return { kind: 'DONE', output: { delivery: 'NOT_SUPPORTED', departmentCode: code } };
+  }
+
+  const { identifier } = await resolveDepartmentIdentifier(ctx.citizenId, code);
+
+  const submission = {
+    govflowReference: ctx.applicationNumber,
+    citizenIdentifier: identifier,
+    serviceType: ctx.serviceType,
+    decision: (approved ? 'APPROVED' : 'REJECTED') as 'APPROVED' | 'REJECTED',
+    decidedAt: (application.decisionAt ?? new Date()).toISOString(),
+    // An opaque handle, not a name: the department needs to know a competent
+    // officer decided, not who they were.
+    officerReference: application.decidedById
+      ? `GF-OFF-${application.decidedById.slice(-8).toUpperCase()}`
+      : 'GF-OFF-UNKNOWN',
+    reason: application.decisionNotes ?? '',
+    amount: approved ? application.requestedAmount : null,
+  };
+
+  try {
+    const receipt = await connector.submitDecision(submission, idempotencyKey);
+
+    await prisma.departmentAcknowledgement.update({
+      where: { id: acknowledgement.id },
+      data: {
+        status: DeliveryStatus.DELIVERED as never,
+        departmentReference: receipt.departmentReference,
+        deliveredAt: new Date(),
+        requestPayload: submission as never,
+        lastError: null,
+      },
+    });
+
+    await recordAudit({
+      action: AuditAction.DECISION_DELIVERED,
+      resourceType: 'Application',
+      resourceId: ctx.applicationId,
+      metadata: {
+        applicationNumber: ctx.applicationNumber,
+        departmentCode: code,
+        departmentReference: receipt.departmentReference,
+        duplicate: receipt.status === 'DUPLICATE',
+      },
+    });
+
+    await notifyApplicant(
+      ctx.applicationId,
+      'Recorded by the department',
+      `${getDepartmentDefinition(code).name} has recorded this decision under reference ${receipt.departmentReference}.`,
+      NotificationType.SUCCESS,
+    );
+
+    return {
+      kind: 'DONE',
+      output: {
+        departmentCode: code,
+        departmentReference: receipt.departmentReference,
+        duplicate: receipt.status === 'DUPLICATE',
+      },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'delivery failed';
+    await prisma.departmentAcknowledgement.update({
+      where: { id: acknowledgement.id },
+      data: { status: DeliveryStatus.FAILED as never, lastError: message },
+    });
+    await recordAudit({
+      action: AuditAction.DECISION_DELIVERY_FAILED,
+      resourceType: 'Application',
+      resourceId: ctx.applicationId,
+      metadata: { applicationNumber: ctx.applicationNumber, departmentCode: code },
+    });
+    // Rethrown so the existing retry/exception machinery applies unchanged.
+    throw error;
   }
 }
 
@@ -1173,12 +1345,14 @@ export async function recordOfficerDecision(input: DecisionInput) {
         output: { decision, notes } as never,
       },
     });
+    // The workflow is NOT complete here. The officer has decided; the
+    // department that owns the outcome has not been told yet, and that
+    // delivery is a step that can fail and be seen to have failed.
     await prisma.workflowInstance.update({
       where: { id: application.workflow.id },
       data: {
-        status: WorkflowStatus.COMPLETED as never,
-        currentStep: StepType.FINAL_DECISION as never,
-        completedAt: now,
+        status: WorkflowStatus.RUNNING as never,
+        currentStep: StepType.DEPARTMENT_WRITE_BACK as never,
       },
     });
   }
@@ -1211,6 +1385,31 @@ export async function recordOfficerDecision(input: DecisionInput) {
       : `Application ${application.applicationNumber} has been rejected. Reason: ${notes}`,
     approved ? NotificationType.SUCCESS : NotificationType.ERROR,
   );
+
+  // Hand the decision to the department. Enqueued rather than awaited: the
+  // officer's click must not block on somebody else's uptime.
+  if (application.workflow) {
+    const writeBack = await prisma.workflowStep.findFirst({
+      where: {
+        workflowInstanceId: application.workflow.id,
+        stepType: StepType.DEPARTMENT_WRITE_BACK as never,
+      },
+    });
+    if (writeBack) {
+      await enqueueStep(jobNameForStep(StepType.DEPARTMENT_WRITE_BACK), {
+        applicationId,
+        workflowInstanceId: application.workflow.id,
+        stepType: StepType.DEPARTMENT_WRITE_BACK,
+      });
+    } else {
+      // An application created before write-back existed has no such step.
+      // Completing the workflow is the correct answer for those.
+      await prisma.workflowInstance.update({
+        where: { id: application.workflow.id },
+        data: { status: WorkflowStatus.COMPLETED as never, completedAt: now },
+      });
+    }
+  }
 
   log.info('officer decision recorded', { applicationId, decision });
   return updated;

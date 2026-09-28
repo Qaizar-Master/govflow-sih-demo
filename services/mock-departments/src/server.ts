@@ -159,6 +159,146 @@ app.get('/api/student/:studentId', requireBasic, async (req, res) => {
 });
 
 // ===========================================================================
+// DECISION INBOXES
+//
+// The write direction. Each department issues its OWN reference number, in its
+// own format, and that reference - not GovFlow's application number - is the
+// authoritative handle for the sanction afterwards.
+//
+// Both honour Idempotency-Key, because the caller will retry after a timeout
+// and nobody should be sanctioned twice for one application.
+// ===========================================================================
+
+interface DecisionRecord {
+  reference: string;
+  receivedAt: string;
+  payload: Record<string, unknown>;
+}
+
+/** Idempotency key -> the reference already issued for it. */
+const decisionsByKey: Record<DeptCode, Map<string, DecisionRecord>> = {
+  IDENTITY: new Map(),
+  INCOME: new Map(),
+  EDUCATION: new Map(),
+};
+
+let educationSequence = 0;
+let incomeSequence = 0;
+
+function idempotencyKeyOf(req: Request): string | null {
+  const key = req.header('idempotency-key');
+  return key && key.trim() !== '' ? key.trim() : null;
+}
+
+app.post('/api/education/decisions', requireBasic, async (req, res) => {
+  requestCounts.EDUCATION.total += 1;
+  if (await applyFailureMode('EDUCATION', res)) return;
+
+  const key = idempotencyKeyOf(req);
+  if (!key) {
+    res.status(400).json({ error: 'BadRequest', message: 'Idempotency-Key header is required' });
+    return;
+  }
+
+  const body = req.body as Record<string, unknown>;
+  if (!body?.student_no || !body?.decision_status || !body?.partner_ref) {
+    res.status(400).json({
+      error: 'BadRequest',
+      message: 'student_no, decision_status and partner_ref are required',
+    });
+    return;
+  }
+
+  const seen = decisionsByKey.EDUCATION.get(key);
+  if (seen) {
+    // A retry, not a second sanction. Same reference, flagged as a duplicate.
+    res.status(200).json({ ack_id: seen.reference, received_at: seen.receivedAt, duplicate: true });
+    return;
+  }
+
+  educationSequence += 1;
+  const record: DecisionRecord = {
+    reference: `EDU/SCH/2026/${String(educationSequence).padStart(5, '0')}`,
+    receivedAt: new Date().toISOString(),
+    payload: body,
+  };
+  decisionsByKey.EDUCATION.set(key, record);
+
+  res.status(201).json({
+    ack_id: record.reference,
+    received_at: record.receivedAt,
+    student_no: body.student_no,
+    status: 'RECORDED',
+  });
+});
+
+app.post('/api/income/decisions', requireBearer, async (req, res) => {
+  requestCounts.INCOME.total += 1;
+  if (await applyFailureMode('INCOME', res)) return;
+
+  const key = idempotencyKeyOf(req);
+  if (!key) {
+    res.status(400).json({ error: 'BadRequest', message: 'Idempotency-Key header is required' });
+    return;
+  }
+
+  const body = req.body as Record<string, unknown>;
+  if (!body?.applicantId || !body?.outcome || !body?.externalRef) {
+    res.status(400).json({
+      error: 'BadRequest',
+      message: 'applicantId, outcome and externalRef are required',
+    });
+    return;
+  }
+
+  const seen = decisionsByKey.INCOME.get(key);
+  if (seen) {
+    res.status(200).json({ reference: seen.reference, timestamp: seen.receivedAt, duplicate: true });
+    return;
+  }
+
+  incomeSequence += 1;
+  const record: DecisionRecord = {
+    // A deliberately different shape from Education's: the whole point is that
+    // no two departments agree on anything, references included.
+    reference: `REV-2026-${String(400000 + incomeSequence)}`,
+    receivedAt: new Date().toISOString(),
+    payload: body,
+  };
+  decisionsByKey.INCOME.set(key, record);
+
+  res.status(201).json({
+    reference: record.reference,
+    timestamp: record.receivedAt,
+    applicantId: body.applicantId,
+    state: 'RECORDED',
+  });
+});
+
+/**
+ * Demo and test control: forget every recorded decision.
+ *
+ * The store is in-memory and deliberately survives a GovFlow database reset,
+ * which is realistic - a department does not forget because its partner
+ * re-seeded. That makes an explicit reset necessary for repeatable runs.
+ */
+app.delete('/api/__decisions', (_req, res) => {
+  for (const code of DEPT_CODES) decisionsByKey[code].clear();
+  educationSequence = 0;
+  incomeSequence = 0;
+  res.json({ cleared: true });
+});
+
+/** Demo aid: what each department believes it has been told. */
+app.get('/api/__decisions', (_req, res) => {
+  res.json({
+    note: 'Decisions these simulated departments have recorded. Synthetic data only.',
+    education: [...decisionsByKey.EDUCATION.entries()].map(([key, r]) => ({ ...r, key })),
+    income: [...decisionsByKey.INCOME.entries()].map(([key, r]) => ({ ...r, key })),
+  });
+});
+
+// ===========================================================================
 // Simulated national identity provider.
 //
 // Hosted here for the same reason the three departments share a process: a demo
@@ -267,6 +407,12 @@ app.get('/', (_req, res) => {
       authorize: 'GET /sso/authorize?client_id=&redirect_uri=&state=',
       token: 'POST /sso/token',
       userinfo: 'GET /sso/userinfo',
+    },
+    decisions: {
+      education: 'POST /api/education/decisions  (Basic; Idempotency-Key required)',
+      income: 'POST /api/income/decisions  (Bearer; Idempotency-Key required)',
+      inspect: 'GET /api/__decisions',
+      note: 'Each department issues its own reference format. Identity and the legacy export have no inbox at all.',
     },
     control: {
       inspect: 'GET /__control',

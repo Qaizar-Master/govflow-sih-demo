@@ -1,4 +1,9 @@
 import { ConnectorType, DataType, DepartmentType } from './enums.js';
+import {
+  educationDecisionMapping,
+  incomeDecisionMapping,
+  type DecisionChannel,
+} from './decision.js';
 import { SOURCE_SYSTEM } from './common-data-model.js';
 import { env } from './env.js';
 import {
@@ -52,6 +57,12 @@ export interface DepartmentDefinition {
   connector: RestConnectorConfig | CsvConnectorConfig;
   /** Retryable failures of this department block the workflow when true. */
   blocking: boolean;
+  /**
+   * How this department receives decisions, or null when it cannot receive
+   * them at all. The legacy CSV export is the honest null: a nightly file drop
+   * has no inbox, and write-back there has to become a human queue.
+   */
+  decisionChannel: DecisionChannel | null;
 }
 
 export const DEPARTMENTS: DepartmentDefinition[] = [
@@ -64,6 +75,8 @@ export const DEPARTMENTS: DepartmentDefinition[] = [
     description: 'REST/JSON identity registry. Authenticates with an API key header.',
     identifierPrefix: 'CIT-',
     mapping: identityMapping,
+    // The identity registry is asked about people; it is never told outcomes.
+    decisionChannel: null,
     blocking: true,
     connector: {
       connectorType: ConnectorType.REST_JSON,
@@ -85,6 +98,11 @@ export const DEPARTMENTS: DepartmentDefinition[] = [
       'REST/JSON income registry using snake_case identifiers. Authenticates with a bearer token.',
     identifierPrefix: 'INC-',
     mapping: incomeMapping,
+    decisionChannel: {
+      path: '/api/income/decisions',
+      mapping: incomeDecisionMapping,
+      referencePath: 'reference',
+    },
     blocking: true,
     connector: {
       connectorType: ConnectorType.REST_JSON,
@@ -106,6 +124,11 @@ export const DEPARTMENTS: DepartmentDefinition[] = [
       'REST/JSON student registry with a third schema convention. Authenticates with HTTP Basic.',
     identifierPrefix: 'STU-',
     mapping: educationMapping,
+    decisionChannel: {
+      path: '/api/education/decisions',
+      mapping: educationDecisionMapping,
+      referencePath: 'ack_id',
+    },
     blocking: true,
     connector: {
       connectorType: ConnectorType.REST_JSON,
@@ -135,6 +158,9 @@ export const DEPARTMENTS: DepartmentDefinition[] = [
     identifierPrefix: 'CIT-',
     mapping: legacyMapping,
     blocking: false,
+    // A nightly CSV export has no inbox. Decisions bound for this system have
+    // to be queued for a human, and the workflow says so rather than pretending.
+    decisionChannel: null,
     connector: {
       connectorType: ConnectorType.CSV_FILE,
       filePath: env.LEGACY_CSV_PATH,

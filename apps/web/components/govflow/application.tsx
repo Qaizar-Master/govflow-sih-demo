@@ -38,6 +38,7 @@ import {
 import type {
   ApplicationDetail,
   ConsentRecord,
+  DepartmentAcknowledgementRecord,
   DocumentRecord,
   ExceptionRecord,
   ReconciliationReport,
@@ -881,6 +882,92 @@ export function ReconciliationPanel({ report }: { report: ReconciliationReport }
           GovFlow reports these differences; it does not decide what they mean. A changed
           value may be a correction to an out-of-date assessment.
         </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * DEPARTMENT RECEIPT
+ *
+ * The custody invariant made visible. GovFlow does not become the record of
+ * the decision - it hands the decision to the department that owns the
+ * outcome and then shows *their* reference. If GovFlow disappeared, that
+ * reference would still be the one that mattered.
+ */
+export function AcknowledgementPanel({
+  acknowledgements,
+}: {
+  acknowledgements: DepartmentAcknowledgementRecord[];
+}) {
+  if (acknowledgements.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Database className="h-4 w-4 text-primary" />
+          Recorded with the department
+        </CardTitle>
+        <CardDescription>
+          The decision is handed back to the department that owns the outcome. Their reference
+          is the authoritative one — GovFlow&rsquo;s application number only correlates.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {acknowledgements.map((ack) => (
+          <div key={ack.departmentCode} className="rounded-md border border-border p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-medium">{ack.departmentName}</span>
+              {ack.status === 'DELIVERED' ? (
+                <Badge className="gap-1 border-emerald-500/40 bg-emerald-500/10 font-normal text-emerald-700 dark:text-emerald-400">
+                  <CheckCircle2 className="h-3 w-3" /> Recorded
+                </Badge>
+              ) : ack.status === 'NOT_SUPPORTED' ? (
+                <Badge variant="outline" className="gap-1 font-normal">
+                  <Ban className="h-3 w-3" /> No electronic inbox
+                </Badge>
+              ) : ack.status === 'FAILED' ? (
+                <Badge variant="destructive" className="gap-1 font-normal">
+                  <AlertTriangle className="h-3 w-3" /> Not delivered
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="gap-1 font-normal">
+                  <Clock className="h-3 w-3" /> Sending
+                </Badge>
+              )}
+            </div>
+
+            {ack.departmentReference ? (
+              <p className="mt-2 text-sm">
+                Their reference{' '}
+                <code className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">
+                  {ack.departmentReference}
+                </code>
+                {ack.deliveredAt ? (
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {relativeTime(ack.deliveredAt)}
+                  </span>
+                ) : null}
+              </p>
+            ) : (
+              <p className="mt-2 text-xs text-muted-foreground">
+                {ack.status === 'NOT_SUPPORTED'
+                  ? 'This system has no electronic inbox, so the decision must be recorded there by hand. The decision itself stands.'
+                  : 'No reference issued yet. The decision stands; only its delivery is outstanding.'}
+              </p>
+            )}
+
+            {ack.lastError && ack.status !== 'DELIVERED' ? (
+              <p className="mt-1.5 text-xs text-destructive">{ack.lastError}</p>
+            ) : null}
+            {ack.attempts > 0 && ack.status !== 'DELIVERED' ? (
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                {ack.attempts} delivery attempt(s)
+              </p>
+            ) : null}
+          </div>
+        ))}
       </CardContent>
     </Card>
   );

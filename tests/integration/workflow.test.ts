@@ -117,7 +117,8 @@ describe.skipIf(!available)('scholarship workflow, end to end', () => {
       where: { applicationId },
       include: { steps: { orderBy: { order: 'asc' } } },
     });
-    expect(workflow.steps).toHaveLength(9);
+    // Nine steps up to the decision, plus delivering that decision back.
+    expect(workflow.steps).toHaveLength(10);
     expect(workflow.steps.map((s) => s.stepType)).toEqual([
       'CONSENT',
       'IDENTITY_VERIFICATION',
@@ -128,6 +129,7 @@ describe.skipIf(!available)('scholarship workflow, end to end', () => {
       'DATA_QUALITY_CHECK',
       'OFFICER_REVIEW',
       'FINAL_DECISION',
+      'DEPARTMENT_WRITE_BACK',
     ]);
   });
 
@@ -307,7 +309,13 @@ describe.skipIf(!available)('scholarship workflow, end to end', () => {
     // Citizen and officer read the same underlying state.
     expect(citizenView.body.data.application.status).toBe('APPROVED');
     expect(citizenView.body.data.application.decidedBy.name).toBe('Sunita Deshpande');
-    expect(citizenView.body.data.timeline.at(-1).status).toBe('COMPLETED');
+    // The human decision is final the moment the officer makes it. Delivering
+    // it to the department is a separate step that may still be in flight, and
+    // that is deliberate: an outage there must not read as an undecided file.
+    const decisionStep = citizenView.body.data.timeline.find(
+      (t: { stepType: string }) => t.stepType === 'FINAL_DECISION',
+    );
+    expect(decisionStep.status).toBe('COMPLETED');
     // Internal officer notes stay internal.
     expect(citizenView.body.data.reviewNotes).toEqual([]);
 

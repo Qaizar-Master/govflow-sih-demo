@@ -17,6 +17,7 @@ import { SlaBadge, StatusBadge } from '@/components/govflow/status';
 import {
   AuditTable,
   ConsentPanel,
+  AcknowledgementPanel,
   ConsolidatedProfile,
   DocumentsPanel,
   ExceptionsPanel,
@@ -203,6 +204,9 @@ export default function CitizenApplicationDetail() {
             </TabsContent>
 
             <TabsContent value="verification" className="space-y-4">
+              {/* The citizen sees the department's own reference too - it is
+                  the one they will quote to that department later. */}
+              <AcknowledgementPanel acknowledgements={data.acknowledgements} />
               <VerificationGrid detail={data} />
               <ConsolidatedProfile detail={data} />
             </TabsContent>

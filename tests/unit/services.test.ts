@@ -62,12 +62,29 @@ describe('service catalogue', () => {
     }
   });
 
-  it('ends every service with officer review then a human decision', () => {
+  it('ends every service with officer review, a human decision, then delivery', () => {
     for (const service of SERVICES) {
-      const tail = service.steps.slice(-2);
-      expect(tail.map((s) => s.stepType)).toEqual(['OFFICER_REVIEW', 'FINAL_DECISION']);
-      // Neither may ever be automated - a decision always needs an officer.
-      expect(tail.every((s) => s.automated)).toBe(false);
+      const tail = service.steps.slice(-3);
+      expect(tail.map((s) => s.stepType)).toEqual([
+        'OFFICER_REVIEW',
+        'FINAL_DECISION',
+        'DEPARTMENT_WRITE_BACK',
+      ]);
+      // The two human steps may never be automated - a decision always needs
+      // an officer - while delivery of that decision always is.
+      expect(tail[0]!.automated).toBe(false);
+      expect(tail[1]!.automated).toBe(false);
+      expect(tail[2]!.automated).toBe(true);
+    }
+  });
+
+  it('routes every decision back to the department that owns the outcome', () => {
+    for (const service of SERVICES) {
+      // Write-back has no departmentCode of its own: it targets the service's
+      // owning department, so one step definition serves every service.
+      const writeBack = service.steps.find((s) => s.stepType === 'DEPARTMENT_WRITE_BACK')!;
+      expect(writeBack.departmentCode).toBeNull();
+      expect(['INCOME', 'EDUCATION']).toContain(service.owningDepartment);
     }
   });
 });
@@ -78,7 +95,7 @@ describe('services differ in shape, not in machinery', () => {
       .map((s) => s.departmentCode)
       .filter(Boolean);
     expect(departments).toEqual(['IDENTITY', 'INCOME', 'EDUCATION', 'LEGACY']);
-    expect(SCHOLARSHIP_SERVICE.steps).toHaveLength(9);
+    expect(SCHOLARSHIP_SERVICE.steps).toHaveLength(10);
   });
 
   it('income certificate skips education entirely', () => {

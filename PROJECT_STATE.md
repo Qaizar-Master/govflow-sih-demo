@@ -27,14 +27,14 @@ connects to a real government system.
 
 | | |
 |---|---|
-| Tests | **155 passing** (13 files: 6 unit, 7 integration) |
+| Tests | **168 passing** (14 files: 6 unit, 8 integration) |
 | Typecheck | clean (root + web) |
 | Lint | clean, `--max-warnings 0` |
 | Docker | `docker compose up --build` boots, migrates and seeds itself |
 | Backend | ~10,260 lines TS |
 | Frontend | ~6,315 lines TS/TSX, 19 pages |
 | API | 44 documented OpenAPI paths |
-| Data model | 16 Prisma models |
+| Data model | 17 Prisma models |
 | Services | 3 |
 | Connectors | 4 |
 
@@ -50,7 +50,11 @@ OAuth client, and assertion-backed identifier links. See §6.6.
 **Phase C** — pre-fill, the declarative form schema, the DRAFT lifecycle and
 the three-way reconciliation. **This is the USP, and it now exists.** See §6.7.
 
-Committed as `c6e0a16`, `1898396`.
+**Phase D** — write-back: the decision now leaves GovFlow and is recorded by
+the department that owns the outcome, under that department's own reference.
+See §6.8.
+
+Committed as `c6e0a16`, `1898396`, `53e58a2`.
 
 **Rebuild note.** Compose bakes the source into the API, worker and web images
 rather than bind-mounting it, so `docker compose restart` after a code change
@@ -547,6 +551,61 @@ than "no pre-fill recorded" on every file. `GF-SCH-2026-00003` ships with a
 18 tests in `tests/integration/prefill.test.ts`, including a real BullMQ worker
 so `verified` is genuinely fetched rather than assumed.
 
+### 6.8 Phase D — write-back (2026-09-28)
+
+The direction that answers *"isn't this just a tracker?"*. Until now every
+connector was `GET`-only: an officer could approve, and the decision never left
+the building.
+
+**Write-back proves the invariant rather than breaking it.** GovFlow does not
+become the record of the decision. It hands the decision to the department that
+owns the outcome and then displays **their** reference. If GovFlow were deleted
+afterwards, the sanction would still exist, in the system authorised to hold
+it. The application detail shows `EDU/SCH/2026/00001`, not our own number.
+
+**The same mapping engine, in reverse.** `applyMapping` was already generic, so
+outbound payloads are declared the same way inbound ones are — the department's
+naming conventions stay in configuration, never in core logic. Education
+receives `student_no` / `decision_status` / `sanctioned_amount`; Revenue
+receives `applicantId` / `outcome` / `certificateType`; and they issue
+references in deliberately different formats, because no two departments agree
+on anything.
+
+**Delivery is a separate step.** `DEPARTMENT_WRITE_BACK` runs *after*
+`FINAL_DECISION` rather than inside it. Folding them together would mean a
+departmental outage could look like an undecided application. Instead: the
+decision is final the moment the officer makes it, delivery retries through the
+existing BullMQ machinery, and a failure raises an officer exception while the
+approval stands.
+
+**Capability is declared, not assumed.** `canReceiveDecisions()` is part of the
+connector contract. The legacy CSV export returns false — a nightly file drop
+has no inbox, and pretending otherwise is exactly the convenient fiction this
+project exists to avoid. That path yields `NOT_SUPPORTED`, a non-retryable
+`WRITE_NOT_SUPPORTED` error and a "needs recording by hand" exception, because
+no amount of retrying grows a CSV export an API.
+
+**Idempotency is not optional.** The key is derived from the application and
+stored (`govflow:<number>:<DEPT>`), never generated per attempt: this is the
+one call that causes an effect in someone else's system, and a retry after a
+timeout must not sanction the same file twice. The department echoes the same
+reference back with `duplicate: true`.
+
+**The officer is pseudonymous to the department.** The payload carries
+`GF-OFF-…`, not a name or an email. The department needs to know a competent
+officer decided and can trace it through GovFlow's audit log; it does not need
+an individual's identity in its own records.
+
+**One bug, and a sharp one.** `runStep` carried a guard — *"a decided
+application never runs more automation"* — written before write-back existed.
+It silently stranded every approval at exactly the step whose purpose is to run
+after a decision: the worker logged `COMPLETED`, nothing was persisted, and
+nothing reached the department. Write-back is now the single documented
+exception to that guard. Both this and the idempotency key were confirmed by
+mutation; removing either fails its tests and nothing else.
+
+13 tests in `tests/integration/write-back.test.ts`.
+
 ### Principles extracted
 
 1. **Block on objectively determinable absence; advise on subjective mismatch.**
@@ -568,6 +627,11 @@ so `verified` is genuinely fetched rather than assumed.
    checked" and "disagrees" must be different words, or the panel gets ignored.
 10. **A draft is not a queue item.** Unsent answers belong to the person typing
     them.
+11. **Declare a capability; never assume it.** A system that cannot be written
+    to should say so, and the workflow should degrade visibly rather than drop
+    the write.
+12. **Separate the decision from its delivery.** Conflating them lets someone
+    else's outage look like your indecision.
 
 ---
 
@@ -575,7 +639,7 @@ so `verified` is genuinely fetched rather than assumed.
 
 | Gap | Impact |
 |---|---|
-| **No write-back.** Every connector is `GET`-only. The officer approves and nothing leaves GovFlow. | Biggest architectural hole. Makes it *feel* like a tracker. |
+| ~~No write-back.~~ **Closed in Phase D.** Decisions are delivered to the owning department and its own reference is stored and displayed. Residual: the receiving systems are simulated, and only INCOME and EDUCATION have inboxes. | The tracker criticism no longer applies. |
 | ~~No pre-fill.~~ **Closed in Phase C.** The form is answered from the registries behind the consent gate, and reconciled three ways at decision time. | The USP exists. |
 | ~~No form schema.~~ **Closed in Phase C** (`packages/contracts/src/form-schema.ts`). Residual: the field sets are ours, not transcribed from real departmental forms. | Shape is right; provenance of the fields is not yet real. |
 | ~~Identity binding is assumed.~~ **Closed in Phase B.** Signing in through the provider replaces `SEED` links with `SSO_ASSERTION` + a timestamp. Residual: the provider is simulated and `id_token` is HS256, not RS256/JWKS. | Pre-fill now has a defensible basis. |
@@ -637,13 +701,12 @@ CDM → department     write-back   ❌ the real prize
 | ~~2~~ | ~~Mock SSO / identity binding~~ | done | Phase B — see §6.6 |
 | ~~3~~ | ~~Pre-fill + form schema + DRAFT flow~~ | done | Phase C — see §6.7 |
 | 4 | Officer time-saved metric | ~1h | Highest pitch return per hour |
-| 5 | Write-back connector | larger | Turns a viewer into infrastructure |
+| ~~5~~ | ~~Write-back connector~~ | done | Phase D — see §6.8 |
 | 6 | Payment step (mock treasury gateway) | ~2h | Reuses the citizen-gate pattern |
 
-Items 1-3 are done. **Item 5, the write-back connector, is now the largest
-remaining hole**: an officer approves and the decision still never leaves
-GovFlow, which is what keeps it feeling like a tracker rather than
-infrastructure.
+Items 1-3 and 5 are done. What remains is smaller and more optional: the
+time-saved metric (highest pitch return per hour), payments, the AI question,
+and real schema provenance from data.gov.in.
 
 ---
 
@@ -685,7 +748,7 @@ Other seeded citizens: `vikram.shinde@` (name + income mismatch),
 ### Commands
 
 ```bash
-npm test                  # 155 tests
+npm test                  # 168 tests
 npm run typecheck
 npm run lint
 npm run db:seed -- --force        # wipe + reseed

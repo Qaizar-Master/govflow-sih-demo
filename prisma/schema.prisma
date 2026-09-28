@@ -68,6 +68,7 @@ enum StepType {
   DATA_QUALITY_CHECK
   OFFICER_REVIEW
   FINAL_DECISION
+  DEPARTMENT_WRITE_BACK
 }
 
 enum ConsentStatus {
@@ -156,6 +157,13 @@ enum IdentifierLinkSource {
   SSO_ASSERTION
   /// Entered by a departmental officer against a physical document.
   OFFICER_ASSERTED
+}
+
+enum DeliveryStatus {
+  PENDING
+  DELIVERED
+  FAILED
+  NOT_SUPPORTED
 }
 
 enum NotificationType {
@@ -280,6 +288,7 @@ model Application {
 
   workflow          WorkflowInstance?
   prefillSnapshot   PrefillSnapshot?
+  acknowledgements  DepartmentAcknowledgement[]
   consents          Consent[]
   documents         Document[]
   exceptions        Exception[]
@@ -313,6 +322,36 @@ model PrefillSnapshot {
   createdAt     DateTime @default(now())
 
   application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+/// The department's own receipt for a decision GovFlow handed it.
+///
+/// `departmentReference` is the point: it is issued by the system that is
+/// authorised to hold the outcome, and it is what the citizen and the officer
+/// are shown afterwards. GovFlow's own application number correlates; it
+/// does not certify. If GovFlow were deleted, the sanction would still exist
+/// under this reference, in the department that granted it.
+model DepartmentAcknowledgement {
+  id                  String         @id @default(cuid())
+  applicationId       String
+  departmentCode      String
+  departmentReference String?
+  status              DeliveryStatus @default(PENDING)
+  attempts            Int            @default(0)
+  /// Stable across retries, so a timeout cannot sanction the same file twice.
+  idempotencyKey      String         @unique
+  /// Exactly what was sent, in the department's own schema, for audit.
+  requestPayload      Json?
+  lastError           String?
+  deliveredAt         DateTime?
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([applicationId, departmentCode])
+  @@index([status])
 }
 
 model WorkflowInstance {

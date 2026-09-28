@@ -138,6 +138,24 @@ const DECISION_STEP: Omit<WorkflowStepDefinition, 'order'> = {
   description: 'Approval or rejection recorded by the officer, plus citizen notification.',
 };
 
+/**
+ * Hands the decision back to the department that owns the outcome.
+ *
+ * Automated, and deliberately *after* the human decision rather than part of
+ * it: the officer decides, and delivery is a separate thing that can fail,
+ * retry and be seen to have failed. Folding it into FINAL_DECISION would mean
+ * a department outage could look like an undecided application.
+ */
+const WRITE_BACK_STEP: Omit<WorkflowStepDefinition, 'order'> = {
+  stepType: StepType.DEPARTMENT_WRITE_BACK,
+  label: 'Record with the department',
+  departmentCode: null,
+  requiresConsentFor: null,
+  automated: true,
+  description:
+    "Sends the decision to the owning department and stores that department's own reference number.",
+};
+
 /** Numbers the chosen steps 1..n so each service has a contiguous order. */
 function sequence(steps: Omit<WorkflowStepDefinition, 'order'>[]): WorkflowStepDefinition[] {
   return steps.map((step, index) => ({ ...step, order: index + 1 }));
@@ -182,6 +200,7 @@ export const SCHOLARSHIP_SERVICE: ServiceDefinition = {
     QUALITY_STEP,
     REVIEW_STEP,
     DECISION_STEP,
+    WRITE_BACK_STEP,
   ]),
   policy: {
     maxAnnualIncome: 250000,
@@ -217,6 +236,7 @@ export const INCOME_CERTIFICATE_SERVICE: ServiceDefinition = {
     QUALITY_STEP,
     REVIEW_STEP,
     DECISION_STEP,
+    WRITE_BACK_STEP,
   ]),
   policy: {
     maxAnnualIncome: null,
@@ -253,6 +273,7 @@ export const RATION_CARD_SERVICE: ServiceDefinition = {
     QUALITY_STEP,
     REVIEW_STEP,
     DECISION_STEP,
+    WRITE_BACK_STEP,
   ]),
   policy: {
     maxAnnualIncome: 180000,
@@ -315,4 +336,5 @@ export const JOB_NAMES = {
   LEGACY_CROSS_CHECK: 'workflow.legacy.crosscheck',
   DOCUMENT_VALIDATION: 'workflow.document.validate',
   DATA_QUALITY_CHECK: 'workflow.dataquality.check',
+  DEPARTMENT_WRITE_BACK: 'workflow.decision.writeback',
 } as const;

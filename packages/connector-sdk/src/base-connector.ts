@@ -5,6 +5,8 @@ import {
   normalizedRecordSchema,
   type ConnectorFetchOutcome,
   type ConnectorType,
+  type DecisionAcknowledgement,
+  type DecisionSubmission,
   type DataType,
   type DepartmentConnector,
   type HealthStatus,
@@ -55,6 +57,32 @@ export abstract class BaseConnector implements DepartmentConnector {
 
   getDepartmentCode(): string {
     return this.def.code;
+  }
+
+  /**
+   * Departments that declare no decision channel cannot be written to.
+   * Declared rather than assumed, so the workflow can degrade visibly instead
+   * of dropping a decision into a system that was never listening.
+   */
+  canReceiveDecisions(): boolean {
+    return this.def.decisionChannel !== null;
+  }
+
+  /**
+   * Default: this department has no inbox. Transports that do have one (REST)
+   * override it. Throwing rather than silently succeeding matters - a
+   * write-back that quietly does nothing is worse than one that fails loudly,
+   * because it looks like the department was told.
+   */
+  async submitDecision(
+    _submission: DecisionSubmission,
+    _idempotencyKey: string,
+  ): Promise<DecisionAcknowledgement> {
+    throw new ConnectorError({
+      connector: this.def.code,
+      kind: CONNECTOR_ERROR_KIND.WRITE_NOT_SUPPORTED,
+      message: `${this.def.name} cannot receive decisions: it exposes no write channel.`,
+    });
   }
 
   getConnectorType(): ConnectorType {

@@ -4,11 +4,14 @@ import {
   CONNECTOR_ERROR_KIND,
   DepartmentStatus,
   type ConnectorErrorKind,
+  type DecisionAcknowledgement,
+  type DecisionSubmission,
   type HealthStatus,
   type RawFetchResult,
 } from '@govflow/contracts';
 import { BaseConnector, type ConnectorContext } from './base-connector.js';
 import { ConnectorError } from './errors.js';
+import { applyMapping } from './transform.js';
 
 function authHeaders(auth: AuthScheme): Record<string, string> {
   switch (auth.kind) {
@@ -194,6 +197,117 @@ export abstract class RestConnector extends BaseConnector {
         connector: this.def.code,
         kind,
         message: `${this.def.name} is not responding correctly: ${detail}`,
+        endpoint,
+        httpStatus: status,
+        cause: error,
+      });
+    }
+  }
+
+  /**
+   * Hands a decision to the department and returns *their* reference for it.
+   *
+   * Two things are deliberate. The payload is produced by the same declarative
+   * mapping engine as inbound traffic, only in reverse - the department's
+   * naming conventions stay in configuration, never in core logic. And the
+   * idempotency key travels as a header the department echoes back on a
+   * duplicate, because the one call that causes an effect in somebody else's
+   * system must be safe to retry after a timeout.
+   */
+  override async submitDecision(
+    submission: DecisionSubmission,
+    idempotencyKey: string,
+  ): Promise<DecisionAcknowledgement> {
+    const channel = this.def.decisionChannel;
+    if (!channel) {
+      throw new ConnectorError({
+        connector: this.def.code,
+        kind: CONNECTOR_ERROR_KIND.WRITE_NOT_SUPPORTED,
+        message: `${this.def.name} cannot receive decisions: it exposes no write channel.`,
+      });
+    }
+
+    const endpoint = `${this.rest.baseUrl}${channel.path}`;
+    const { mapped, missingRequired } = applyMapping(submission, channel.mapping);
+    if (missingRequired.length > 0) {
+      throw new ConnectorError({
+        connector: this.def.code,
+        kind: CONNECTOR_ERROR_KIND.BAD_REQUEST,
+        message: `Decision mapping "${channel.mapping.name}" could not populate: ${missingRequired.join(', ')}`,
+        endpoint,
+        details: { missingRequired },
+      });
+    }
+
+    const started = Date.now();
+    try {
+      const res = await this.http.post(channel.path, mapped, {
+        headers: { 'idempotency-key': idempotencyKey },
+      });
+      const durationMs = Date.now() - started;
+      const body = res.data as Record<string, unknown> | null;
+      const reference = body?.[channel.referencePath];
+
+      if (typeof reference !== 'string' || reference.trim() === '') {
+        // Without their reference the write is unprovable, so it does not
+        // count as delivered however cheerful the status code was.
+        await this.log({
+          connector: this.def.code,
+          departmentCode: this.def.code,
+          endpoint,
+          method: 'POST',
+          requestStatus: 'FAILURE',
+          httpStatus: res.status,
+          durationMs,
+          errorKind: CONNECTOR_ERROR_KIND.MALFORMED_RESPONSE,
+          message: `acknowledgement carried no "${channel.referencePath}"`,
+        });
+        throw new ConnectorError({
+          connector: this.def.code,
+          kind: CONNECTOR_ERROR_KIND.MALFORMED_RESPONSE,
+          message: `${this.def.name} accepted the decision but returned no reference number`,
+          endpoint,
+          httpStatus: res.status,
+        });
+      }
+
+      await this.log({
+        connector: this.def.code,
+        departmentCode: this.def.code,
+        endpoint,
+        method: 'POST',
+        requestStatus: 'SUCCESS',
+        httpStatus: res.status,
+        durationMs,
+      });
+
+      return {
+        departmentReference: reference,
+        acceptedAt: new Date().toISOString(),
+        status: body?.duplicate === true ? 'DUPLICATE' : 'ACCEPTED',
+        raw: body,
+      };
+    } catch (error) {
+      if (error instanceof ConnectorError) throw error;
+      const durationMs = Date.now() - started;
+      const { kind, status, detail } = classify(error);
+
+      await this.log({
+        connector: this.def.code,
+        departmentCode: this.def.code,
+        endpoint,
+        method: 'POST',
+        requestStatus: 'FAILURE',
+        httpStatus: status,
+        durationMs,
+        errorKind: kind,
+        message: detail,
+      });
+
+      throw new ConnectorError({
+        connector: this.def.code,
+        kind,
+        message: `${this.def.name} did not accept the decision: ${detail}`,
         endpoint,
         httpStatus: status,
         cause: error,

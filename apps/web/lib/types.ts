@@ -248,6 +248,16 @@ export interface PrefillResult {
   fetchedAt: string;
 }
 
+export interface DepartmentAcknowledgementRecord {
+  departmentCode: string;
+  departmentName: string;
+  departmentReference: string | null;
+  status: 'PENDING' | 'DELIVERED' | 'FAILED' | 'NOT_SUPPORTED';
+  attempts: number;
+  lastError: string | null;
+  deliveredAt: string | null;
+}
+
 export interface ApplicationDetail {
   application: {
     id: string;
@@ -267,6 +277,7 @@ export interface ApplicationDetail {
     stepsPending: number;
   };
   reconciliation: ReconciliationReport;
+  acknowledgements: DepartmentAcknowledgementRecord[];
   citizen: {
     id: string;
     externalId: string;

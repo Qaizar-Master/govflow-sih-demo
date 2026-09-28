@@ -319,6 +319,7 @@ export async function getApplicationDetail(applicationId: string) {
       },
       decidedBy: { select: { id: true, name: true } },
       normalizedRecords: { orderBy: { receivedAt: 'asc' } },
+      acknowledgements: { orderBy: { departmentCode: 'asc' } },
     },
   });
   if (!application) return null;
@@ -366,6 +367,18 @@ export async function getApplicationDetail(applicationId: string) {
       stepsPending,
     },
     reconciliation,
+    // The department's own receipt. Their reference is the authoritative one;
+    // GovFlow's application number only correlates.
+    acknowledgements: application.acknowledgements.map((a) => ({
+      departmentCode: a.departmentCode,
+      departmentName:
+        DEPARTMENTS.find((d) => d.code === a.departmentCode)?.name ?? a.departmentCode,
+      departmentReference: a.departmentReference,
+      status: a.status,
+      attempts: a.attempts,
+      lastError: a.lastError,
+      deliveredAt: a.deliveredAt?.toISOString() ?? null,
+    })),
     citizen: {
       id: application.citizen.id,
       externalId: application.citizen.externalId,

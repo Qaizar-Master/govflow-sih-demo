@@ -56,6 +56,11 @@ requires every department to surrender ownership of its data.
   through the codebase. A new department is a connector plus a mapping.
 - **Common data model** — Zod-validated, with per-field provenance so an officer can see
   which system asserted what.
+- **Write-back** — the officer's decision is handed to the department that owns the
+  outcome, over the same declarative mapping engine in reverse, and GovFlow then displays
+  *their* reference number rather than its own. Delivery is a distinct workflow step, so a
+  departmental outage never reads as an undecided application, and the call is idempotent
+  so a retry after a timeout cannot sanction the same file twice.
 - **Pre-fill with reconciliation** — the citizen's form comes back answered from the
   registries that already hold the data, each value attributed to the department that
   asserted it. At decision time the officer sees three columns: what the applicant was
@@ -429,7 +434,7 @@ Also available: **Test connector** (probe a department and see raw beside normal
 ## 17. Testing
 
 ```bash
-npm test              # 155 tests
+npm test              # 168 tests
 npm run typecheck     # every workspace, including the web app
 npm run lint
 ```
@@ -447,8 +452,10 @@ department scoping; the identifier crosswalk and its non-retryable failure when 
 absent; the full SSO round trip including replayed codes, forged state and unregistered
 redirect URIs; the draft/pre-fill/submit lifecycle including the consent gate, a department
 outage during pre-fill and per-field submission validation; every reconciliation verdict,
-including the distinction between a citizen edit and a registry that moved; and an
-end-to-end run from submission through four departments to officer approval.
+including the distinction between a citizen edit and a registry that moved; write-back,
+covering a failed delivery leaving the decision standing, idempotency across a retry and a
+department with no inbox at all; and an end-to-end run from submission through four
+departments to officer approval and back out to the department that owns the outcome.
 
 ## 18. Troubleshooting
 

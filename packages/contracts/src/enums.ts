@@ -69,6 +69,8 @@ export const StepType = {
   DATA_QUALITY_CHECK: 'DATA_QUALITY_CHECK',
   OFFICER_REVIEW: 'OFFICER_REVIEW',
   FINAL_DECISION: 'FINAL_DECISION',
+  /** Hands the decision back to the department that owns the outcome. */
+  DEPARTMENT_WRITE_BACK: 'DEPARTMENT_WRITE_BACK',
 } as const;
 export type StepType = (typeof StepType)[keyof typeof StepType];
 
@@ -172,6 +174,16 @@ export const IdentifierLinkSource = {
 export type IdentifierLinkSource =
   (typeof IdentifierLinkSource)[keyof typeof IdentifierLinkSource];
 
+/** How far a decision has got towards the department that owns the outcome. */
+export const DeliveryStatus = {
+  PENDING: 'PENDING',
+  DELIVERED: 'DELIVERED',
+  FAILED: 'FAILED',
+  /** The department has no inbox. Needs a human, not a retry. */
+  NOT_SUPPORTED: 'NOT_SUPPORTED',
+} as const;
+export type DeliveryStatus = (typeof DeliveryStatus)[keyof typeof DeliveryStatus];
+
 export const NotificationType = {
   INFO: 'INFO',
   SUCCESS: 'SUCCESS',
@@ -221,5 +233,8 @@ export const AuditAction = {
   DEPARTMENT_RESTORED: 'DEPARTMENT_RESTORED',
   LEGACY_IMPORT_RUN: 'LEGACY_IMPORT_RUN',
   WORKFLOW_RESUMED: 'WORKFLOW_RESUMED',
+  /** A decision was accepted by the department that owns the outcome. */
+  DECISION_DELIVERED: 'DECISION_DELIVERED',
+  DECISION_DELIVERY_FAILED: 'DECISION_DELIVERY_FAILED',
 } as const;
 export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];

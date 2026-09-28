@@ -21,6 +21,7 @@ import {
   ConsolidatedProfile,
   DocumentsPanel,
   ExceptionsPanel,
+  AcknowledgementPanel,
   ReconciliationPanel,
   SlaCard,
   ValidationPanel,
@@ -182,6 +183,7 @@ export default function OfficerApplicationDetail() {
             </TabsList>
 
             <TabsContent value="evidence" className="space-y-4">
+              <AcknowledgementPanel acknowledgements={data.acknowledgements} />
               <ConsolidatedProfile detail={data} />
               <VerificationGrid detail={data} />
             </TabsContent>

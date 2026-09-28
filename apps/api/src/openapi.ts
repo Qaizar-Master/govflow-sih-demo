@@ -441,6 +441,8 @@ enforced in Express middleware, never in the browser.`,
       get: {
         tags: ['Officer'],
         summary: 'Application detail including officer notes',
+        description:
+          "Carries `reconciliation` (what the applicant was shown, submitted and what the registries say now) and `acknowledgements` (the owning department's own reference for the decision, which is the authoritative handle - GovFlow's application number only correlates).",
         parameters: [idParam],
         responses: { 200: okResponse('Application detail'), ...common },
       },
@@ -449,7 +451,8 @@ enforced in Express middleware, never in the browser.`,
       post: {
         tags: ['Officer'],
         summary: 'Approve an application',
-        description: 'The only path to APPROVED. Requires an OFFICER or ADMIN session.',
+        description:
+          'The only path to APPROVED. Requires an OFFICER or ADMIN session. Records the decision and enqueues its delivery to the owning department - the officer is not blocked on that department being up, since delivery is a separate workflow step with its own retries whose outcome appears as `acknowledgements` on the detail response.',
         parameters: [idParam],
         requestBody: jsonBody({
           type: 'object',
