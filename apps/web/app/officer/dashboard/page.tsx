@@ -16,11 +16,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ErrorBlock, LoadingBlock, PageHeader, StatCard } from '@/components/govflow/shell';
 import { SeverityBadge, SlaBadge, StatusBadge } from '@/components/govflow/status';
+import { TimeSavedCard } from '@/components/govflow/application';
 import type {
   ApplicationListItem,
   ExceptionRecord,
   OfficerMetrics,
   Paginated,
+  TimeSavedReport,
 } from '@/lib/types';
 
 export default function OfficerDashboard() {
@@ -43,6 +45,11 @@ export default function OfficerDashboard() {
     () =>
       api.get<Paginated<ExceptionRecord>>('/api/officer/exceptions?status=OPEN&pageSize=5'),
     6000,
+    ready,
+  );
+  const timeSaved = usePolling(
+    () => api.get<TimeSavedReport>('/api/officer/time-saved'),
+    15000,
     ready,
   );
 
@@ -111,6 +118,12 @@ export default function OfficerDashboard() {
           }
         />
       </div>
+
+      {timeSaved.data ? (
+        <div className="mb-6">
+          <TimeSavedCard report={timeSaved.data} />
+        </div>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">

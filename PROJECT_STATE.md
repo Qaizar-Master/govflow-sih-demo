@@ -27,13 +27,13 @@ connects to a real government system.
 
 | | |
 |---|---|
-| Tests | **168 passing** (14 files: 6 unit, 8 integration) |
+| Tests | **174 passing** (15 files: 6 unit, 9 integration) |
 | Typecheck | clean (root + web) |
 | Lint | clean, `--max-warnings 0` |
 | Docker | `docker compose up --build` boots, migrates and seeds itself |
 | Backend | ~10,260 lines TS |
 | Frontend | ~6,315 lines TS/TSX, 19 pages |
-| API | 44 documented OpenAPI paths |
+| API | 45 documented OpenAPI paths |
 | Data model | 17 Prisma models |
 | Services | 3 |
 | Connectors | 4 |
@@ -54,7 +54,9 @@ the three-way reconciliation. **This is the USP, and it now exists.** See §6.7.
 the department that owns the outcome, under that department's own reference.
 See §6.8.
 
-Committed as `c6e0a16`, `1898396`, `53e58a2`.
+**Roadmap item 4** — the time-saved metric. See §6.9.
+
+Committed as `c6e0a16`, `1898396`, `53e58a2`, `be54450`.
 
 **Rebuild note.** Compose bakes the source into the API, worker and web images
 rather than bind-mounting it, so `docker compose restart` after a code change
@@ -606,6 +608,43 @@ mutation; removing either fails its tests and nothing else.
 
 13 tests in `tests/integration/write-back.test.ts`.
 
+### 6.9 Time saved (2026-09-28)
+
+The whole pitch is that GovFlow saves officer and citizen effort, and until now
+nothing measured either.
+
+**The integrity problem is the design problem.** A savings metric is trivially
+easy to inflate and almost impossible for an audience to check, so the response
+shape keeps two things apart and never silently adds them up:
+
+- `measured` — things that actually happened, counted from the database:
+  lookups completed, fields a registry supplied, documents read, decisions
+  filed, and the real median time from submission to decision.
+- `assumptions` — how long each would have taken by hand. Judgements, not
+  observations, configurable via `MINUTES_PER_MANUAL_LOOKUP`,
+  `SECONDS_PER_FORM_FIELD` and `MINUTES_PER_MANUAL_CROSS_CHECK`.
+
+`estimate` is the product, labelled as such, shipped with the caveat. Halving
+the assumptions halves the estimate — verified: 10.2h → 5.1h. A judge who
+thinks twelve minutes is generous can change the number and watch it move,
+which is the difference between evidence and a claim.
+
+**Two deliberate understatements.** Only `FILLED` fields count as pre-filled —
+a box the citizen still had to type saved nobody anything, and counting it
+would be the easiest available inflation. And `medianDecisionHours` is `null`
+rather than `0` when nothing has been decided, because zero reads as "decided
+instantly", which is a claim about speed rather than an absence of data.
+
+**One asymmetry, asserted in a test rather than left to be rediscovered.** An
+unsent draft counts towards *citizen* effort saved but never towards *officer*
+effort. The citizen genuinely did not type those answers — that happened. But
+no officer has been given work by a form nobody sent, so counting it as
+avoided officer effort would be inventing work that never existed.
+
+Six tests in `tests/integration/time-saved.test.ts`, including one that
+reproduces the citizen estimate with a calculator so no hidden fudge factor can
+creep in.
+
 ### Principles extracted
 
 1. **Block on objectively determinable absence; advise on subjective mismatch.**
@@ -632,6 +671,9 @@ mutation; removing either fails its tests and nothing else.
     the write.
 12. **Separate the decision from its delivery.** Conflating them lets someone
     else's outage look like your indecision.
+13. **Ship the assumptions with the number.** An estimate nobody can
+    interrogate is a claim; one whose inputs are visible and adjustable is
+    evidence. Where a figure could flatter or understate, prefer understating.
 
 ---
 
@@ -700,13 +742,12 @@ CDM → department     write-back   ❌ the real prize
 | ~~1~~ | ~~Officer scoped to owning department~~ | done | Phase A — see §6.5 |
 | ~~2~~ | ~~Mock SSO / identity binding~~ | done | Phase B — see §6.6 |
 | ~~3~~ | ~~Pre-fill + form schema + DRAFT flow~~ | done | Phase C — see §6.7 |
-| 4 | Officer time-saved metric | ~1h | Highest pitch return per hour |
+| ~~4~~ | ~~Officer time-saved metric~~ | done | See §6.9 |
 | ~~5~~ | ~~Write-back connector~~ | done | Phase D — see §6.8 |
 | 6 | Payment step (mock treasury gateway) | ~2h | Reuses the citizen-gate pattern |
 
-Items 1-3 and 5 are done. What remains is smaller and more optional: the
-time-saved metric (highest pitch return per hour), payments, the AI question,
-and real schema provenance from data.gov.in.
+Items 1-5 are done. What remains is genuinely optional: payments, the AI
+privacy question, and real schema provenance from data.gov.in.
 
 ---
 
@@ -748,7 +789,7 @@ Other seeded citizens: `vikram.shinde@` (name + income mismatch),
 ### Commands
 
 ```bash
-npm test                  # 168 tests
+npm test                  # 174 tests
 npm run typecheck
 npm run lint
 npm run db:seed -- --force        # wipe + reseed

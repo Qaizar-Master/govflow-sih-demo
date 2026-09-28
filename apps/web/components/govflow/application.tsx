@@ -14,6 +14,7 @@ import {
   RotateCw,
   ShieldCheck,
   Sparkles,
+  Timer,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -44,6 +45,7 @@ import type {
   ReconciliationReport,
   ReconciliationVerdict,
   TimelineEntry,
+  TimeSavedReport,
   ValidationReport,
 } from '@/lib/types';
 
@@ -968,6 +970,97 @@ export function AcknowledgementPanel({
             ) : null}
           </div>
         ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * TIME SAVED
+ *
+ * Presented as two separate things, because they are two separate things: the
+ * counts are measured, the minutes are assumed, and the estimate is only the
+ * product of the two. Showing the estimate alone would be the easiest way to
+ * make an unfalsifiable claim, so the workings stay on the card.
+ */
+export function TimeSavedCard({ report }: { report: TimeSavedReport }) {
+  const { measured, assumptions, estimate } = report;
+
+  const rows: [string, number, string][] = [
+    [
+      'Department lookups completed',
+      measured.departmentLookupsCompleted,
+      `${assumptions.minutesPerManualLookup} min each by hand`,
+    ],
+    [
+      'Form answers supplied by a registry',
+      measured.fieldsPrefilled,
+      `${assumptions.secondsPerFormField}s each to find and type`,
+    ],
+    [
+      'Documents read automatically',
+      measured.documentsAutoExtracted,
+      `${assumptions.minutesPerManualCrossCheck} min each to transcribe`,
+    ],
+    [
+      'Decisions filed with the department',
+      measured.decisionsDelivered,
+      `${assumptions.minutesPerManualLookup} min each to re-key`,
+    ],
+  ];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Timer className="h-4 w-4 text-primary" />
+          Effort avoided
+        </CardTitle>
+        <CardDescription>
+          Counts are measured. Minutes per task are assumptions, and the estimate is simply
+          the two multiplied.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-md border border-border p-3">
+            <p className="text-xs text-muted-foreground">Officer time avoided (estimated)</p>
+            <p className="text-2xl font-semibold">{estimate.officerHoursSaved}h</p>
+          </div>
+          <div className="rounded-md border border-border p-3">
+            <p className="text-xs text-muted-foreground">Citizen time avoided (estimated)</p>
+            <p className="text-2xl font-semibold">{estimate.citizenHoursSaved}h</p>
+          </div>
+        </div>
+
+        <table className="w-full text-sm">
+          <tbody>
+            {rows.map(([label, count, rate]) => (
+              <tr key={label} className="border-b border-border/60">
+                <td className="py-1.5">
+                  <span>{label}</span>
+                  <span className="block text-[11px] text-muted-foreground">{rate}</span>
+                </td>
+                <td className="py-1.5 text-right font-mono font-medium">{count}</td>
+              </tr>
+            ))}
+            <tr>
+              <td className="py-1.5">
+                <span>Median time to a decision</span>
+                <span className="block text-[11px] text-muted-foreground">
+                  Measured, not modelled
+                </span>
+              </td>
+              <td className="py-1.5 text-right font-mono font-medium">
+                {measured.medianDecisionHours === null
+                  ? '—'
+                  : `${measured.medianDecisionHours}h`}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p className="text-xs text-muted-foreground">{report.caveat}</p>
       </CardContent>
     </Card>
   );

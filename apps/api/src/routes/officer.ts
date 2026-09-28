@@ -9,6 +9,7 @@ import {
   recordOfficerDecision,
   resolveException,
   resumeWorkflow,
+  timeSavedReport,
 } from '@govflow/core';
 import { ApiError } from '../lib/api-error.js';
 import { handler } from '../lib/async-handler.js';
@@ -35,6 +36,20 @@ officerRouter.get(
   '/metrics',
   handler(async (req, res) =>
     ok(res, await officerMetrics((await officerServiceScope(req)) ?? undefined)),
+  ),
+);
+
+/**
+ * What GovFlow saved, split into what was measured and what was assumed.
+ *
+ * Deliberately a separate endpoint rather than extra fields on /metrics: the
+ * assumptions and the caveat travel with the number, and a caller cannot pick
+ * up the estimate without them.
+ */
+officerRouter.get(
+  '/time-saved',
+  handler(async (req, res) =>
+    ok(res, await timeSavedReport((await officerServiceScope(req)) ?? undefined)),
   ),
 );
 

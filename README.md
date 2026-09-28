@@ -56,6 +56,11 @@ requires every department to surrender ownership of its data.
   through the codebase. A new department is a connector plus a mapping.
 - **Common data model** — Zod-validated, with per-field provenance so an officer can see
   which system asserted what.
+- **Effort avoided, honestly reported** — GovFlow counts what actually happened (lookups
+  completed, answers supplied by a registry, documents read, decisions filed) and keeps
+  those measured counts separate from the assumed minutes-per-task used to turn them into
+  an estimate. The assumptions ship with the number and are configurable, so the claim can
+  be challenged rather than taken on trust.
 - **Write-back** — the officer's decision is handed to the department that owns the
   outcome, over the same declarative mapping engine in reverse, and GovFlow then displays
   *their* reference number rather than its own. Delivery is a distinct workflow step, so a
@@ -232,6 +237,7 @@ is only needed for local (non-Docker) runs, since Compose passes its own environ
 | `WORKFLOW_MAX_ATTEMPTS` | `3` | Retries before an exception |
 | `WORKFLOW_BACKOFF_MS` | `1500` | Exponential backoff base |
 | `SLA_TARGET_DAYS` | `5` | Processing target |
+| `MINUTES_PER_MANUAL_LOOKUP` / `SECONDS_PER_FORM_FIELD` / `MINUTES_PER_MANUAL_CROSS_CHECK` | `12` / `40` / `4` | Assumptions behind the time-saved estimate |
 | `UPLOAD_DIR` / `MAX_UPLOAD_BYTES` | `./data/uploads` / 5 MB | Documents |
 | `GEMINI_API_KEY` | *(empty)* | **Optional.** Empty ⇒ rule-based validation |
 | `GEMINI_MODEL` | `gemini-2.5-flash` | Model id |
@@ -434,7 +440,7 @@ Also available: **Test connector** (probe a department and see raw beside normal
 ## 17. Testing
 
 ```bash
-npm test              # 168 tests
+npm test              # 174 tests
 npm run typecheck     # every workspace, including the web app
 npm run lint
 ```

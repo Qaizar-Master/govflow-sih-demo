@@ -211,6 +211,15 @@ enforced in Express middleware, never in the browser.`,
         responses: { 302: { description: 'Redirect to the frontend, or back to /login with a reason' } },
       },
     },
+    '/api/officer/time-saved': {
+      get: {
+        tags: ['Officer'],
+        summary: 'What GovFlow saved - measured counts and stated assumptions, kept apart',
+        description:
+          'Returns `measured` (counted from the database: department lookups completed, fields pre-filled, documents extracted, decisions delivered, real median time to decision), `assumptions` (minutes per manual task - judgements, not observations, and configurable via MINUTES_PER_MANUAL_LOOKUP, SECONDS_PER_FORM_FIELD and MINUTES_PER_MANUAL_CROSS_CHECK) and the `estimate` derived from multiplying them. Scoped to the services the officer\u2019s department owns.',
+        responses: { 200: okResponse('Measured counts, assumptions and the derived estimate'), ...common },
+      },
+    },
     '/api/applications/draft': {
       post: {
         tags: ['Applications'],

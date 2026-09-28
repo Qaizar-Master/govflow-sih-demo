@@ -405,3 +405,22 @@ export interface Paginated<T> {
   page: number;
   pageSize: number;
 }
+
+export interface TimeSavedReport {
+  measured: {
+    departmentLookupsCompleted: number;
+    fieldsPrefilled: number;
+    fieldsReconciled: number;
+    documentsAutoExtracted: number;
+    decisionsDelivered: number;
+    applicationsDecided: number;
+    medianDecisionHours: number | null;
+  };
+  assumptions: {
+    minutesPerManualLookup: number;
+    secondsPerFormField: number;
+    minutesPerManualCrossCheck: number;
+  };
+  estimate: { officerHoursSaved: number; citizenHoursSaved: number };
+  caveat: string;
+}

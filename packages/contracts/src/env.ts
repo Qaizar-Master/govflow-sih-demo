@@ -80,6 +80,16 @@ const envSchema = z.object({
   WORKFLOW_BACKOFF_MS: z.coerce.number().int().min(100).default(1500),
   SLA_TARGET_DAYS: z.coerce.number().min(0.01).default(5),
 
+  /**
+   * Assumptions behind the time-saved estimate. Configurable precisely because
+   * they are assumptions: the counts GovFlow reports are measured, the minutes
+   * are someone's judgement, and the two must never be presented as one number
+   * with no way to challenge it.
+   */
+  MINUTES_PER_MANUAL_LOOKUP: z.coerce.number().min(0).default(12),
+  SECONDS_PER_FORM_FIELD: z.coerce.number().min(0).default(40),
+  MINUTES_PER_MANUAL_CROSS_CHECK: z.coerce.number().min(0).default(4),
+
   UPLOAD_DIR: z.string().default('./data/uploads'),
   MAX_UPLOAD_BYTES: z.coerce.number().int().default(5 * 1024 * 1024),
 

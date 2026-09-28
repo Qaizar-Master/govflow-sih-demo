@@ -238,6 +238,22 @@ cross-check should not stop a scholarship.
 
 ---
 
+## Closer — what it actually saved (≈1 min)
+
+On the **officer dashboard**, the *Effort avoided* card.
+
+**What to say:** *"Two numbers, and we keep them honest by keeping them apart. The counts
+are measured — this many lookups really completed, this many answers really came from a
+registry. The minutes per task are our assumption, they're printed right there, and
+they're a config value. Halve them and the estimate halves. If you think twelve minutes to
+ring a department is generous, change it and watch the number move — that's the difference
+between a claim and evidence."*
+
+Worth adding: *"An unsent draft counts towards the citizen's time but never the officer's.
+Nobody has been given work by a form that was never sent."*
+
+---
+
 ## Closers worth 30 seconds each
 
 **Departments & mappings** (admin) — the full field-mapping table per department. *Adding
