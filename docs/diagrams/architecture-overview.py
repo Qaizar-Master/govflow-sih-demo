@@ -1,6 +1,6 @@
 # Builds the GovFlow architecture diagram as SVG, matching the existing
 # hand-designed theme: rounded cards, tinted icon tiles, two bordered panels.
-W, H = 1700, 1180
+W, H = 1700, 860
 
 NAVY   = '#1e3a5f'   # structure, titles
 READ   = '#1e40af'   # GovFlow reads from a department
@@ -114,165 +114,127 @@ for name, col in (('arrow', READ), ('arrowW', WRITE), ('arrowM', MON), ('arrowS'
 add('</defs>')
 
 add(f'<rect width="{W}" height="{H}" fill="#ffffff"/>')
-add(f'<rect x="10" y="10" width="{W-20}" height="{H-20}" rx="22" fill="#ffffff" '
+add(f'<rect x="10" y="10" width="{W-20}" height="{H-20}" rx="20" fill="#ffffff" '
     f'stroke="{NAVY}" stroke-width="3"/>')
 
 # ---------- top row ---------------------------------------------------------
-TOP_Y, TOP_H = 68, 90
+TOP_Y, TOP_H = 56, 80
 actors = [
-    (52,  200, '#0d9488', '#f0fdfa', 'MeriPehchaan',    'Identity provider', 'key'),
-    (266, 200, '#16a34a', '#f0fdf4', 'Citizen',          'Apply · track',  'person'),
-    (480, 200, '#1d4ed8', '#eff6ff', 'Review Officer',   'Review · decide',               'shield'),
-    (694, 200, '#7c3aed', '#faf5ff', 'Administrator',    'Monitor · configure',           'gearp'),
+    (52,  200, '#0d9488', '#f0fdfa', 'MeriPehchaan',  'Identity provider',  'key'),
+    (266, 200, '#16a34a', '#f0fdf4', 'Citizen',        'Apply \u00b7 track',   'person'),
+    (480, 200, '#1d4ed8', '#eff6ff', 'Review Officer', 'Review \u00b7 decide', 'shield'),
+    (694, 200, '#7c3aed', '#faf5ff', 'Administrator',  'Monitor \u00b7 configure', 'gearp'),
 ]
 for x, w, col, bg, title, sub, ic in actors:
     card(x, TOP_Y, w, TOP_H, col, bg)
-    tile(x + 16, TOP_Y + 22, 46, '#ffffff')
-    cx, cy = x + 39, TOP_Y + 45
+    tile(x + 14, TOP_Y + 18, 44, '#ffffff')
+    cx, cy = x + 36, TOP_Y + 40
     if ic == 'person': icon_person(cx, cy, col)
     elif ic == 'shield': icon_shield(cx, cy, col)
     elif ic == 'key': icon_key(cx, cy, col)
     else: icon_gear(cx, cy, col, 7)
-    text(x + 76, TOP_Y + 40, title, 16, col, '700')
-    text(x + 76, TOP_Y + 62, sub, 11.5, MUTED)
+    text(x + 70, TOP_Y + 36, title, 15.5, col, '700')
+    text(x + 70, TOP_Y + 57, sub, 11.5, MUTED)
 
 # ---------- panels ----------------------------------------------------------
-PL_X, PL_W = 40, 860           # platform   40 .. 900
-GV_X, GV_W = 1160, 490         # government 1160 .. 1650
-PAN_Y, PAN_H = 206, 770
-
-add(f'<rect x="{PL_X}" y="{PAN_Y}" width="{PL_W}" height="{PAN_H}" rx="16" fill="#fbfdff" '
+PAN_Y, PAN_H = 170, 650
+add(f'<rect x="40" y="{PAN_Y}" width="860" height="{PAN_H}" rx="16" fill="#fbfdff" '
     f'stroke="#2b5ea8" stroke-width="2"/>')
-add(f'<rect x="{GV_X}" y="{PAN_Y}" width="{GV_W}" height="{PAN_H}" rx="16" fill="#f7fdfb" '
+add(f'<rect x="1160" y="{PAN_Y}" width="490" height="{PAN_H}" rx="16" fill="#f7fdfb" '
     f'stroke="#0f766e" stroke-width="2"/>')
 
 def chip(x, y, w, label, fill):
-    add(f'<rect x="{x}" y="{y}" width="{w}" height="34" rx="8" fill="{fill}"/>')
-    text(x + w / 2, y + 23, label, 13.5, '#ffffff', '700', 'middle', '.6')
+    add(f'<rect x="{x}" y="{y}" width="{w}" height="30" rx="8" fill="{fill}"/>')
+    text(x + w / 2, y + 20, label, 12.5, '#ffffff', '700', 'middle', '.5')
 
-chip(64, 192, 250, 'GOVFLOW PLATFORM', '#16305c')
-chip(1184, 192, 330, 'DEPARTMENTAL SYSTEMS (SIMULATED)', '#0f766e')
+chip(64, 156, 232, 'GOVFLOW PLATFORM', '#16305c')
+chip(1184, 156, 316, 'DEPARTMENTAL SYSTEMS (SIMULATED)', '#0f766e')
 
 # ---------- platform stack --------------------------------------------------
 BX, BW = 260, 420
 stack = [
-    (246, '#2563eb', '#eff6ff', 'Next.js User Interface', 'Citizen · Officer · Admin consoles', 'browser'),
-    (394, '#0d9488', '#f0fdfa', 'Express API Gateway',    'Auth · RBAC · consent · pre-fill', 'gear'),
-    (542, '#8b5cf6', '#f5f3ff', 'Redis Queue',            'BullMQ job queue', 'layers'),
-    (690, '#f59e0b', '#fffbeb', 'BullMQ Worker',          'Workflow orchestration · retries', 'gear'),
+    (202, '#2563eb', '#eff6ff', 'Next.js User Interface', 'Citizen \u00b7 Officer \u00b7 Admin consoles', 'browser'),
+    (324, '#0d9488', '#f0fdfa', 'Express API Gateway',    'Auth \u00b7 RBAC \u00b7 consent \u00b7 pre-fill', 'gear'),
+    (446, '#8b5cf6', '#f5f3ff', 'Redis Queue',            'BullMQ job queue', 'layers'),
+    (568, '#f59e0b', '#fffbeb', 'BullMQ Worker',          'Workflow orchestration \u00b7 retries', 'gear'),
 ]
 for y, col, bg, title, sub, ic in stack:
-    card(BX, y, BW, 96, col, bg)
-    tile(BX + 18, y + 24, 48, '#ffffff')
-    cx, cy = BX + 42, y + 48
+    card(BX, y, BW, 92, col, bg)
+    tile(BX + 16, y + 22, 46, '#ffffff')
+    cx, cy = BX + 39, y + 45
     if ic == 'browser': icon_browser(cx, cy, col)
     elif ic == 'layers': icon_layers(cx, cy, col)
     else: icon_gear(cx, cy, col, 8)
-    text(BX + 82, y + 44, title, 16.5, NAVY, '700')
-    text(BX + 82, y + 66, sub, 12, MUTED)
+    text(BX + 78, y + 41, title, 16, NAVY, '700')
+    text(BX + 78, y + 62, sub, 11.5, MUTED)
 
-# Postgres carries an extra line: what the new phases persist.
-card(BX, 838, BW, 106, '#2563eb', '#eff6ff')
-tile(BX + 18, 862, 48, '#ffffff')
-icon_db(BX + 42, 886, '#2563eb')
-text(BX + 82, 876, 'PostgreSQL', 16.5, NAVY, '700')
-text(BX + 82, 897, 'Workflow · audit · common data model', 12, MUTED)
-text(BX + 82, 915, 'Identifier crosswalk · pre-fill snapshots · receipts', 12, '#047857', '600')
+card(BX, 690, BW, 102, '#2563eb', '#eff6ff')
+tile(BX + 16, 712, 46, '#ffffff')
+icon_db(BX + 39, 735, '#2563eb')
+text(BX + 78, 726, 'PostgreSQL', 16, NAVY, '700')
+text(BX + 78, 746, 'Workflow \u00b7 audit \u00b7 common data model', 11.5, MUTED)
+text(BX + 78, 764, 'Identifier crosswalk \u00b7 pre-fill snapshots \u00b7 receipts', 11.5, '#047857', '600')
 
 # ---------- departmental systems -------------------------------------------
 GX, GW = 1184, 442
 depts = [
-    (246, 'Identity Registry',        'REST · API-key header',  'Citizen identity records',  'Read only',              'idcard',  '#0ea5e9'),
-    (418, 'Income Department',        'REST · Bearer token',    'Income assessments',        'Read + receives decisions', 'rupee', '#0d9488'),
-    (590, 'Education Department',     'REST · HTTP Basic auth', 'Enrolment records',         'Read + receives decisions', 'cap',   '#2563eb'),
-    (762, 'Legacy Beneficiary System','CSV export · no API',    'Beneficiary register',      'Read only — no inbox', 'db',    '#64748b'),
+    (202, 'Identity Registry',         'REST \u00b7 API-key header',  'Citizen identity records', 'Read only',                 'idcard', '#0ea5e9'),
+    (358, 'Income Department',         'REST \u00b7 Bearer token',    'Income assessments',       'Read + receives decisions', 'rupee',  '#0d9488'),
+    (514, 'Education Department',      'REST \u00b7 HTTP Basic auth', 'Enrolment records',        'Read + receives decisions', 'cap',    '#2563eb'),
+    (670, 'Legacy Beneficiary System', 'CSV export \u00b7 no API',    'Beneficiary register',     'Read only \u2014 no inbox', 'file',   '#64748b'),
 ]
 for y, title, proto, what, mode, ic, col in depts:
-    card(GX, y, GW, 150, '#b7dfd8', '#ffffff', 12, 1.6)
-    tile(GX + 20, y + 26, 52, '#f1f8f7')
-    cx, cy = GX + 46, y + 52
+    card(GX, y, GW, 138, '#b7dfd8', '#ffffff', 12, 1.6)
+    tile(GX + 18, y + 22, 48, '#f1f8f7')
+    cx, cy = GX + 42, y + 46
     if ic == 'idcard': icon_idcard(cx, cy, col)
     elif ic == 'rupee': icon_rupee(cx, cy, col)
     elif ic == 'cap': icon_cap(cx, cy, col)
     else: icon_file(cx, cy, col)
-    text(GX + 88, y + 46, title, 16, NAVY, '700')
-    text(GX + 88, y + 68, proto, 12, MUTED)
-    text(GX + 20, y + 100, what, 12.5, MUTED)
+    text(GX + 82, y + 42, title, 15.5, NAVY, '700')
+    text(GX + 82, y + 62, proto, 11.5, MUTED)
+    text(GX + 18, y + 92, what, 12, MUTED)
     badge = WRITE if 'receives' in mode else MUTED
     bg = '#ecfdf5' if 'receives' in mode else '#f1f5f9'
-    bw = 9 * len(mode) + 22
-    add(f'<rect x="{GX+20}" y="{y+112}" width="{bw}" height="24" rx="12" fill="{bg}"/>')
-    text(GX + 20 + bw / 2, y + 128, mode, 11.5, badge, '600', 'middle')
+    bw = 8.6 * len(mode) + 20
+    add(f'<rect x="{GX+18}" y="{y+102}" width="{bw}" height="23" rx="11.5" fill="{bg}"/>')
+    text(GX + 18 + bw / 2, y + 118, mode, 11, badge, '600', 'middle')
 
 # ---------- arrows ----------------------------------------------------------
-# identity: citizen authenticates at the provider, provider asserts to GovFlow
-path('M 366 68 L 366 44 L 152 44 L 152 68', SSO, marker='arrowS')
-text(259, 36, 'signs in — GovFlow never sees a password', 12, SSO, '600', 'middle')
-path('M 152 158 L 152 180 L 26 180 L 26 442 L 256 442', SSO, marker='arrowS')
-text(44, 300, 'identity assertion:', 11.5, SSO, '700')
-text(44, 316, 'who they are, and', 11.5, SSO)
-text(44, 332, 'their identifier at', 11.5, SSO)
-text(44, 348, 'each department', 11.5, SSO)
+path('M 366 56 L 366 34 L 152 34 L 152 56', SSO, marker='arrowS')
+text(259, 26, 'signs in \u2014 GovFlow never sees a password', 11.5, SSO, '600', 'middle')
 
-# actors into the UI
-path('M 366 158 L 366 244', NAVY)
-path('M 580 158 L 580 244', NAVY)
-path('M 794 158 L 794 186 L 640 186 L 640 244', NAVY)
+path('M 152 136 L 152 146 L 26 146 L 26 370 L 256 370', SSO, marker='arrowS')
+text(44, 250, 'identity assertion:', 11.5, SSO, '700')
+text(44, 265, 'who they are, and', 11.5, SSO)
+text(44, 280, 'their identifier at', 11.5, SSO)
+text(44, 295, 'each department', 11.5, SSO)
 
-# internal flow
-path('M 470 342 L 470 392', NAVY); text(482, 372, 'REST / JSON', 11.5, MUTED)
-path('M 470 490 L 470 540', NAVY); text(482, 520, 'enqueue', 11.5, MUTED)
-path('M 470 638 L 470 688', NAVY); text(482, 668, 'dequeue', 11.5, MUTED)
-path('M 470 786 L 470 836', NAVY)
-# worker + API both persist
-path('M 260 891 L 206 891 L 206 476 L 256 476', NAVY, sw=1.8)
+path('M 366 136 L 366 200', NAVY)
+path('M 580 136 L 580 200', NAVY)
+path('M 794 136 L 794 158 L 640 158 L 640 200', NAVY)
 
-# monitoring (dashed)
-path('M 680 406 L 760 406 L 760 286 L 1156 286', MON, dash='7 6', marker='arrowM')
-text(772, 268, 'health checks · failure simulation', 12, MON, '600')
+path('M 470 294 L 470 322', NAVY); text(482, 313, 'REST / JSON', 11, MUTED)
+path('M 470 416 L 470 444', NAVY); text(482, 435, 'enqueue', 11, MUTED)
+path('M 470 538 L 470 566', NAVY); text(482, 557, 'dequeue', 11, MUTED)
+path('M 470 660 L 470 688', NAVY)
+path('M 260 741 L 206 741 L 206 394 L 256 394', NAVY, sw=1.8)
 
-# pre-fill: synchronous, straight from the API - NOT through the queue
-path('M 680 446 L 848 446 L 848 348 L 1156 348', READ, marker='arrow')
-text(860, 316, 'PRE-FILL — synchronous read', 12, READ, '700')
-text(860, 332, 'not queued: the citizen is waiting', 11.5, MUTED)
+path('M 680 348 L 740 348 L 740 256 L 1156 256', MON, dash='7 6', marker='arrowM')
+text(752, 244, 'health checks \u00b7 failure simulation', 11.5, MON, '600')
 
-# verification reads, via the worker
-path('M 680 740 L 1156 740', READ, marker='arrow')
-text(692, 710, 'four connectors — verification reads', 12, READ, '700')
-text(692, 726, 'REST × 3 + CSV → one common data model', 11.5, MUTED)
+path('M 680 388 L 804 388 L 804 306 L 1156 306', READ, marker='arrow')
+text(816, 280, 'PRE-FILL \u2014 synchronous read', 11.5, READ, '700')
+text(816, 295, 'not queued: the citizen is waiting', 11, MUTED)
 
-# write-back, only to the two departments that own outcomes
-path('M 680 700 L 964 700 L 964 493 L 1180 493', WRITE, marker='arrowW')
-path('M 964 665 L 1180 665', WRITE, marker='arrowW')
-text(976, 462, 'DECISIONS WRITTEN BACK', 12, WRITE, '700')
-text(976, 478, 'their reference is authoritative', 11.5, MUTED)
+path('M 680 596 L 900 596 L 900 427 L 1180 427', WRITE, marker='arrowW')
+path('M 900 583 L 1180 583', WRITE, marker='arrowW')
+text(912, 402, 'DECISIONS WRITTEN BACK', 11.5, WRITE, '700')
+text(912, 417, 'their reference is authoritative', 11, MUTED)
 
-# ---------- legend ----------------------------------------------------------
-LY = 1000
-add(f'<rect x="40" y="{LY}" width="1610" height="72" rx="12" fill="#f8fafc" stroke="{LINE}"/>')
-items = [
-    (66,  READ,  None,    'Read — GovFlow asks a department for data'),
-    (560, WRITE, None,    'Write — the decision is handed back'),
-    (1000, MON,  '7 6',   'Monitoring — health checks, failure simulation'),
-    (1400, SSO,  None,    'Identity assertion'),
-]
-for x, col, dash, label in items:
-    path(f'M {x} {LY+28} L {x+38} {LY+28}', col, dash=dash,
-         marker={READ: 'arrow', WRITE: 'arrowW', MON: 'arrowM', SSO: 'arrowS'}[col], sw=2.4)
-    text(x + 48, LY + 33, label, 12.5, NAVY)
-text(66, LY + 58,
-     'Every department above is SIMULATED and holds synthetic data only. No real government '
-     'system is connected and no real citizen data appears anywhere.',
-     12, '#b45309', '600')
-
-# ---------- footer ----------------------------------------------------------
-text(W / 2, 1122,
-     'GovFlow — Government Interoperability & Workflow Orchestration Platform',
-     15, NAVY, '700', 'middle')
-text(W / 2, 1144,
-     'Connects departments · pre-fills the form · coordinates the workflow · hands the '
-     'decision back. It never becomes the record.',
-     12, MUTED, '400', 'middle')
+path('M 680 630 L 1156 630', READ, marker='arrow')
+text(692, 652, 'four connectors \u2014 verification reads', 11.5, READ, '700')
+text(692, 667, 'REST \u00d7 3 + CSV \u2192 one common data model', 11, MUTED)
 
 add('</svg>')
 import os

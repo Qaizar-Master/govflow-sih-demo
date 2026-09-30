@@ -7,7 +7,7 @@ no build tooling, no diagram-as-code dependency to install.
 ```bash
 python3 docs/diagrams/architecture-overview.py            # writes the SVG
 google-chrome --headless --disable-gpu --hide-scrollbars \
-  --force-device-scale-factor=2 --window-size=1700,1180 \
+  --force-device-scale-factor=2 --window-size=1700,860 \
   --screenshot=docs/architecture-overview.png \
   "file://$PWD/docs/diagrams/wrap.html"
 ```

@@ -1,182 +1,170 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="1180" viewBox="0 0 1700 1180" font-family="Inter, -apple-system, Segoe UI, Roboto, system-ui, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="860" viewBox="0 0 1700 860" font-family="Inter, -apple-system, Segoe UI, Roboto, system-ui, sans-serif">
 <defs>
 <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#1e40af"/></marker>
 <marker id="arrowW" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#047857"/></marker>
 <marker id="arrowM" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/></marker>
 <marker id="arrowS" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#7c3aed"/></marker>
 </defs>
-<rect width="1700" height="1180" fill="#ffffff"/>
-<rect x="10" y="10" width="1680" height="1160" rx="22" fill="#ffffff" stroke="#1e3a5f" stroke-width="3"/>
-<rect x="52" y="68" width="200" height="90" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="1.6"/>
-<rect x="68" y="90" width="46" height="46" rx="9" fill="#ffffff"/>
-<circle cx="86" cy="113" r="6" fill="none" stroke="#0d9488" stroke-width="2.6"/>
-<line x1="92" y1="113" x2="103" y2="113" stroke="#0d9488" stroke-width="2.6" stroke-linecap="round"/>
-<line x1="100" y1="113" x2="100" y2="118" stroke="#0d9488" stroke-width="2.6" stroke-linecap="round"/>
-<text x="128" y="108" font-size="16" fill="#0d9488" font-weight="700" text-anchor="start" letter-spacing="0">MeriPehchaan</text>
-<text x="128" y="130" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Identity provider</text>
-<rect x="266" y="68" width="200" height="90" rx="12" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.6"/>
-<rect x="282" y="90" width="46" height="46" rx="9" fill="#ffffff"/>
-<circle cx="305" cy="108" r="5.5" fill="#16a34a"/>
-<path d="M 296 122 a 9 9 0 0 1 18 0 z" fill="#16a34a"/>
-<text x="342" y="108" font-size="16" fill="#16a34a" font-weight="700" text-anchor="start" letter-spacing="0">Citizen</text>
-<text x="342" y="130" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Apply · track</text>
-<rect x="480" y="68" width="200" height="90" rx="12" fill="#eff6ff" stroke="#1d4ed8" stroke-width="1.6"/>
-<rect x="496" y="90" width="46" height="46" rx="9" fill="#ffffff"/>
-<path d="M 519 102 l 10 4 v 7 c 0 6 -4 10 -10 12 c -6 -2 -10 -6 -10 -12 v -7 z" fill="#1d4ed8"/>
-<path d="M 515 113 l 3 3 l 6 -6" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="556" y="108" font-size="16" fill="#1d4ed8" font-weight="700" text-anchor="start" letter-spacing="0">Review Officer</text>
-<text x="556" y="130" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Review · decide</text>
-<rect x="694" y="68" width="200" height="90" rx="12" fill="#faf5ff" stroke="#7c3aed" stroke-width="1.6"/>
-<rect x="710" y="90" width="46" height="46" rx="9" fill="#ffffff"/>
-<circle cx="733" cy="113" r="7" fill="none" stroke="#7c3aed" stroke-width="3.4"/>
-<line x1="741.5" y1="113.0" x2="745.0" y2="113.0" stroke="#7c3aed" stroke-width="3" stroke-linecap="round"/>
-<line x1="739.0" y1="119.0" x2="741.5" y2="121.5" stroke="#7c3aed" stroke-width="3" stroke-linecap="round"/>
-<line x1="733.0" y1="121.5" x2="733.0" y2="125.0" stroke="#7c3aed" stroke-width="3" stroke-linecap="round"/>
-<line x1="727.0" y1="119.0" x2="724.5" y2="121.5" stroke="#7c3aed" stroke-width="3" stroke-linecap="round"/>
-<line x1="724.5" y1="113.0" x2="721.0" y2="113.0" stroke="#7c3aed" stroke-width="3" stroke-linecap="round"/>
-<line x1="727.0" y1="107.0" x2="724.5" y2="104.5" stroke="#7c3aed" stroke-width="3" stroke-linecap="round"/>
-<line x1="733.0" y1="104.5" x2="733.0" y2="101.0" stroke="#7c3aed" stroke-width="3" stroke-linecap="round"/>
-<line x1="739.0" y1="107.0" x2="741.5" y2="104.5" stroke="#7c3aed" stroke-width="3" stroke-linecap="round"/>
-<text x="770" y="108" font-size="16" fill="#7c3aed" font-weight="700" text-anchor="start" letter-spacing="0">Administrator</text>
-<text x="770" y="130" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Monitor · configure</text>
-<rect x="40" y="206" width="860" height="770" rx="16" fill="#fbfdff" stroke="#2b5ea8" stroke-width="2"/>
-<rect x="1160" y="206" width="490" height="770" rx="16" fill="#f7fdfb" stroke="#0f766e" stroke-width="2"/>
-<rect x="64" y="192" width="250" height="34" rx="8" fill="#16305c"/>
-<text x="189.0" y="215" font-size="13.5" fill="#ffffff" font-weight="700" text-anchor="middle" letter-spacing=".6">GOVFLOW PLATFORM</text>
-<rect x="1184" y="192" width="330" height="34" rx="8" fill="#0f766e"/>
-<text x="1349.0" y="215" font-size="13.5" fill="#ffffff" font-weight="700" text-anchor="middle" letter-spacing=".6">DEPARTMENTAL SYSTEMS (SIMULATED)</text>
-<rect x="260" y="246" width="420" height="96" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="1.6"/>
-<rect x="278" y="270" width="48" height="48" rx="9" fill="#ffffff"/>
-<rect x="291" y="285" width="22" height="18" rx="3" fill="none" stroke="#2563eb" stroke-width="2.4"/>
-<line x1="291" y1="291" x2="313" y2="291" stroke="#2563eb" stroke-width="2.4"/>
-<circle cx="295" cy="288" r="1.2" fill="#2563eb"/>
-<circle cx="298.5" cy="288" r="1.2" fill="#2563eb"/>
-<circle cx="302" cy="288" r="1.2" fill="#2563eb"/>
-<text x="342" y="290" font-size="16.5" fill="#1e3a5f" font-weight="700" text-anchor="start" letter-spacing="0">Next.js User Interface</text>
-<text x="342" y="312" font-size="12" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Citizen · Officer · Admin consoles</text>
-<rect x="260" y="394" width="420" height="96" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="1.6"/>
-<rect x="278" y="418" width="48" height="48" rx="9" fill="#ffffff"/>
-<circle cx="302" cy="442" r="8" fill="none" stroke="#0d9488" stroke-width="3.4"/>
-<line x1="311.5" y1="442.0" x2="315.0" y2="442.0" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
-<line x1="308.7" y1="448.7" x2="311.2" y2="451.2" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
-<line x1="302.0" y1="451.5" x2="302.0" y2="455.0" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
-<line x1="295.3" y1="448.7" x2="292.8" y2="451.2" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
-<line x1="292.5" y1="442.0" x2="289.0" y2="442.0" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
-<line x1="295.3" y1="435.3" x2="292.8" y2="432.8" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
-<line x1="302.0" y1="432.5" x2="302.0" y2="429.0" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
-<line x1="308.7" y1="435.3" x2="311.2" y2="432.8" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
-<text x="342" y="438" font-size="16.5" fill="#1e3a5f" font-weight="700" text-anchor="start" letter-spacing="0">Express API Gateway</text>
-<text x="342" y="460" font-size="12" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Auth · RBAC · consent · pre-fill</text>
-<rect x="260" y="542" width="420" height="96" rx="12" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.6"/>
-<rect x="278" y="566" width="48" height="48" rx="9" fill="#ffffff"/>
-<path d="M 302 591 l 11 5 l -11 5 l -11 -5 z" fill="#8b5cf6" opacity="1"/>
-<path d="M 302 585 l 11 5 l -11 5 l -11 -5 z" fill="#8b5cf6" opacity="0.72"/>
-<path d="M 302 579 l 11 5 l -11 5 l -11 -5 z" fill="#8b5cf6" opacity="0.45"/>
-<text x="342" y="586" font-size="16.5" fill="#1e3a5f" font-weight="700" text-anchor="start" letter-spacing="0">Redis Queue</text>
-<text x="342" y="608" font-size="12" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">BullMQ job queue</text>
-<rect x="260" y="690" width="420" height="96" rx="12" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.6"/>
-<rect x="278" y="714" width="48" height="48" rx="9" fill="#ffffff"/>
-<circle cx="302" cy="738" r="8" fill="none" stroke="#f59e0b" stroke-width="3.4"/>
-<line x1="311.5" y1="738.0" x2="315.0" y2="738.0" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
-<line x1="308.7" y1="744.7" x2="311.2" y2="747.2" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
-<line x1="302.0" y1="747.5" x2="302.0" y2="751.0" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
-<line x1="295.3" y1="744.7" x2="292.8" y2="747.2" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
-<line x1="292.5" y1="738.0" x2="289.0" y2="738.0" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
-<line x1="295.3" y1="731.3" x2="292.8" y2="728.8" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
-<line x1="302.0" y1="728.5" x2="302.0" y2="725.0" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
-<line x1="308.7" y1="731.3" x2="311.2" y2="728.8" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
-<text x="342" y="734" font-size="16.5" fill="#1e3a5f" font-weight="700" text-anchor="start" letter-spacing="0">BullMQ Worker</text>
-<text x="342" y="756" font-size="12" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Workflow orchestration · retries</text>
-<rect x="260" y="838" width="420" height="106" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="1.6"/>
-<rect x="278" y="862" width="48" height="48" rx="9" fill="#ffffff"/>
-<ellipse cx="302" cy="879" rx="11" ry="4" fill="#2563eb"/>
-<path d="M 291 879 v 13 a 11 4 0 0 0 22 0 v -13" fill="#2563eb"/>
-<ellipse cx="302" cy="892" rx="11" ry="4" fill="#2563eb" opacity=".55"/>
-<text x="342" y="876" font-size="16.5" fill="#1e3a5f" font-weight="700" text-anchor="start" letter-spacing="0">PostgreSQL</text>
-<text x="342" y="897" font-size="12" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Workflow · audit · common data model</text>
-<text x="342" y="915" font-size="12" fill="#047857" font-weight="600" text-anchor="start" letter-spacing="0">Identifier crosswalk · pre-fill snapshots · receipts</text>
-<rect x="1184" y="246" width="442" height="150" rx="12" fill="#ffffff" stroke="#b7dfd8" stroke-width="1.6"/>
-<rect x="1204" y="272" width="52" height="52" rx="9" fill="#f1f8f7"/>
-<rect x="1218" y="289" width="24" height="18" rx="3" fill="none" stroke="#0ea5e9" stroke-width="2.2"/>
-<circle cx="1225" cy="296" r="3.2" fill="#0ea5e9"/>
-<path d="M 1220 304 a 5 5 0 0 1 10 0" fill="#0ea5e9"/>
-<line x1="1232" y1="294" x2="1241" y2="294" stroke="#0ea5e9" stroke-width="1.8" stroke-linecap="round"/>
-<line x1="1232" y1="298" x2="1239" y2="298" stroke="#0ea5e9" stroke-width="1.8" stroke-linecap="round"/>
-<line x1="1232" y1="302" x2="1237" y2="302" stroke="#0ea5e9" stroke-width="1.8" stroke-linecap="round"/>
-<text x="1272" y="292" font-size="16" fill="#1e3a5f" font-weight="700" text-anchor="start" letter-spacing="0">Identity Registry</text>
-<text x="1272" y="314" font-size="12" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">REST · API-key header</text>
-<text x="1204" y="346" font-size="12.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Citizen identity records</text>
-<rect x="1204" y="358" width="103" height="24" rx="12" fill="#f1f5f9"/>
-<text x="1255.5" y="374" font-size="11.5" fill="#5b6b7f" font-weight="600" text-anchor="middle" letter-spacing="0">Read only</text>
-<rect x="1184" y="418" width="442" height="150" rx="12" fill="#ffffff" stroke="#b7dfd8" stroke-width="1.6"/>
-<rect x="1204" y="444" width="52" height="52" rx="9" fill="#f1f8f7"/>
-<text x="1230" y="478" font-size="24" fill="#0d9488" font-weight="600" text-anchor="middle">₹</text>
-<text x="1272" y="464" font-size="16" fill="#1e3a5f" font-weight="700" text-anchor="start" letter-spacing="0">Income Department</text>
-<text x="1272" y="486" font-size="12" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">REST · Bearer token</text>
-<text x="1204" y="518" font-size="12.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Income assessments</text>
-<rect x="1204" y="530" width="247" height="24" rx="12" fill="#ecfdf5"/>
-<text x="1327.5" y="546" font-size="11.5" fill="#047857" font-weight="600" text-anchor="middle" letter-spacing="0">Read + receives decisions</text>
-<rect x="1184" y="590" width="442" height="150" rx="12" fill="#ffffff" stroke="#b7dfd8" stroke-width="1.6"/>
-<rect x="1204" y="616" width="52" height="52" rx="9" fill="#f1f8f7"/>
-<path d="M 1230 634 l 14 6 l -14 6 l -14 -6 z" fill="#2563eb"/>
-<path d="M 1222 643 v 6 a 8 5 0 0 0 16 0 v -6" fill="none" stroke="#2563eb" stroke-width="2.2"/>
-<text x="1272" y="636" font-size="16" fill="#1e3a5f" font-weight="700" text-anchor="start" letter-spacing="0">Education Department</text>
-<text x="1272" y="658" font-size="12" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">REST · HTTP Basic auth</text>
-<text x="1204" y="690" font-size="12.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Enrolment records</text>
-<rect x="1204" y="702" width="247" height="24" rx="12" fill="#ecfdf5"/>
-<text x="1327.5" y="718" font-size="11.5" fill="#047857" font-weight="600" text-anchor="middle" letter-spacing="0">Read + receives decisions</text>
-<rect x="1184" y="762" width="442" height="150" rx="12" fill="#ffffff" stroke="#b7dfd8" stroke-width="1.6"/>
-<rect x="1204" y="788" width="52" height="52" rx="9" fill="#f1f8f7"/>
-<path d="M 1221 802 h 12 l 7 7 v 17 a 2 2 0 0 1 -2 2 h -17 a 2 2 0 0 1 -2 -2 v -22 a 2 2 0 0 1 2 -2 z" fill="none" stroke="#64748b" stroke-width="2.2"/>
-<path d="M 1233 802 v 7 h 7" fill="none" stroke="#64748b" stroke-width="2.2"/>
-<line x1="1225" y1="815" x2="1236" y2="815" stroke="#64748b" stroke-width="1.8" stroke-linecap="round"/>
-<line x1="1225" y1="820" x2="1236" y2="820" stroke="#64748b" stroke-width="1.8" stroke-linecap="round"/>
-<line x1="1225" y1="825" x2="1236" y2="825" stroke="#64748b" stroke-width="1.8" stroke-linecap="round"/>
-<text x="1272" y="808" font-size="16" fill="#1e3a5f" font-weight="700" text-anchor="start" letter-spacing="0">Legacy Beneficiary System</text>
-<text x="1272" y="830" font-size="12" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">CSV export · no API</text>
-<text x="1204" y="862" font-size="12.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Beneficiary register</text>
-<rect x="1204" y="874" width="202" height="24" rx="12" fill="#f1f5f9"/>
-<text x="1305.0" y="890" font-size="11.5" fill="#5b6b7f" font-weight="600" text-anchor="middle" letter-spacing="0">Read only — no inbox</text>
-<path d="M 366 68 L 366 44 L 152 44 L 152 68" fill="none" stroke="#7c3aed" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowS)"/>
-<text x="259" y="36" font-size="12" fill="#7c3aed" font-weight="600" text-anchor="middle" letter-spacing="0">signs in — GovFlow never sees a password</text>
-<path d="M 152 158 L 152 180 L 26 180 L 26 442 L 256 442" fill="none" stroke="#7c3aed" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowS)"/>
-<text x="44" y="300" font-size="11.5" fill="#7c3aed" font-weight="700" text-anchor="start" letter-spacing="0">identity assertion:</text>
-<text x="44" y="316" font-size="11.5" fill="#7c3aed" font-weight="400" text-anchor="start" letter-spacing="0">who they are, and</text>
-<text x="44" y="332" font-size="11.5" fill="#7c3aed" font-weight="400" text-anchor="start" letter-spacing="0">their identifier at</text>
-<text x="44" y="348" font-size="11.5" fill="#7c3aed" font-weight="400" text-anchor="start" letter-spacing="0">each department</text>
-<path d="M 366 158 L 366 244" fill="none" stroke="#1e3a5f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
-<path d="M 580 158 L 580 244" fill="none" stroke="#1e3a5f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
-<path d="M 794 158 L 794 186 L 640 186 L 640 244" fill="none" stroke="#1e3a5f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
-<path d="M 470 342 L 470 392" fill="none" stroke="#1e3a5f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
-<text x="482" y="372" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">REST / JSON</text>
-<path d="M 470 490 L 470 540" fill="none" stroke="#1e3a5f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
-<text x="482" y="520" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">enqueue</text>
-<path d="M 470 638 L 470 688" fill="none" stroke="#1e3a5f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
-<text x="482" y="668" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">dequeue</text>
-<path d="M 470 786 L 470 836" fill="none" stroke="#1e3a5f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
-<path d="M 260 891 L 206 891 L 206 476 L 256 476" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
-<path d="M 680 406 L 760 406 L 760 286 L 1156 286" fill="none" stroke="#64748b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6" marker-end="url(#arrowM)"/>
-<text x="772" y="268" font-size="12" fill="#64748b" font-weight="600" text-anchor="start" letter-spacing="0">health checks · failure simulation</text>
-<path d="M 680 446 L 848 446 L 848 348 L 1156 348" fill="none" stroke="#1e40af" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
-<text x="860" y="316" font-size="12" fill="#1e40af" font-weight="700" text-anchor="start" letter-spacing="0">PRE-FILL — synchronous read</text>
-<text x="860" y="332" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">not queued: the citizen is waiting</text>
-<path d="M 680 740 L 1156 740" fill="none" stroke="#1e40af" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
-<text x="692" y="710" font-size="12" fill="#1e40af" font-weight="700" text-anchor="start" letter-spacing="0">four connectors — verification reads</text>
-<text x="692" y="726" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">REST × 3 + CSV → one common data model</text>
-<path d="M 680 700 L 964 700 L 964 493 L 1180 493" fill="none" stroke="#047857" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowW)"/>
-<path d="M 964 665 L 1180 665" fill="none" stroke="#047857" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowW)"/>
-<text x="976" y="462" font-size="12" fill="#047857" font-weight="700" text-anchor="start" letter-spacing="0">DECISIONS WRITTEN BACK</text>
-<text x="976" y="478" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">their reference is authoritative</text>
-<rect x="40" y="1000" width="1610" height="72" rx="12" fill="#f8fafc" stroke="#d8dfe8"/>
-<path d="M 66 1028 L 104 1028" fill="none" stroke="#1e40af" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
-<text x="114" y="1033" font-size="12.5" fill="#1e3a5f" font-weight="400" text-anchor="start" letter-spacing="0">Read — GovFlow asks a department for data</text>
-<path d="M 560 1028 L 598 1028" fill="none" stroke="#047857" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowW)"/>
-<text x="608" y="1033" font-size="12.5" fill="#1e3a5f" font-weight="400" text-anchor="start" letter-spacing="0">Write — the decision is handed back</text>
-<path d="M 1000 1028 L 1038 1028" fill="none" stroke="#64748b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6" marker-end="url(#arrowM)"/>
-<text x="1048" y="1033" font-size="12.5" fill="#1e3a5f" font-weight="400" text-anchor="start" letter-spacing="0">Monitoring — health checks, failure simulation</text>
-<path d="M 1400 1028 L 1438 1028" fill="none" stroke="#7c3aed" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowS)"/>
-<text x="1448" y="1033" font-size="12.5" fill="#1e3a5f" font-weight="400" text-anchor="start" letter-spacing="0">Identity assertion</text>
-<text x="66" y="1058" font-size="12" fill="#b45309" font-weight="600" text-anchor="start" letter-spacing="0">Every department above is SIMULATED and holds synthetic data only. No real government system is connected and no real citizen data appears anywhere.</text>
-<text x="850.0" y="1122" font-size="15" fill="#1e3a5f" font-weight="700" text-anchor="middle" letter-spacing="0">GovFlow — Government Interoperability &amp; Workflow Orchestration Platform</text>
-<text x="850.0" y="1144" font-size="12" fill="#5b6b7f" font-weight="400" text-anchor="middle" letter-spacing="0">Connects departments · pre-fills the form · coordinates the workflow · hands the decision back. It never becomes the record.</text>
+<rect width="1700" height="860" fill="#ffffff"/>
+<rect x="10" y="10" width="1680" height="840" rx="20" fill="#ffffff" stroke="#1e3a5f" stroke-width="3"/>
+<rect x="52" y="56" width="200" height="80" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="1.6"/>
+<rect x="66" y="74" width="44" height="44" rx="9" fill="#ffffff"/>
+<circle cx="83" cy="96" r="6" fill="none" stroke="#0d9488" stroke-width="2.6"/>
+<line x1="89" y1="96" x2="100" y2="96" stroke="#0d9488" stroke-width="2.6" stroke-linecap="round"/>
+<line x1="97" y1="96" x2="97" y2="101" stroke="#0d9488" stroke-width="2.6" stroke-linecap="round"/>
+<text x="122" y="92" font-size="15.5" fill="#0d9488" font-weight="700" text-anchor="start" letter-spacing="0">MeriPehchaan</text>
+<text x="122" y="113" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Identity provider</text>
+<rect x="266" y="56" width="200" height="80" rx="12" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.6"/>
+<rect x="280" y="74" width="44" height="44" rx="9" fill="#ffffff"/>
+<circle cx="302" cy="91" r="5.5" fill="#16a34a"/>
+<path d="M 293 105 a 9 9 0 0 1 18 0 z" fill="#16a34a"/>
+<text x="336" y="92" font-size="15.5" fill="#16a34a" font-weight="700" text-anchor="start" letter-spacing="0">Citizen</text>
+<text x="336" y="113" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Apply · track</text>
+<rect x="480" y="56" width="200" height="80" rx="12" fill="#eff6ff" stroke="#1d4ed8" stroke-width="1.6"/>
+<rect x="494" y="74" width="44" height="44" rx="9" fill="#ffffff"/>
+<path d="M 516 85 l 10 4 v 7 c 0 6 -4 10 -10 12 c -6 -2 -10 -6 -10 -12 v -7 z" fill="#1d4ed8"/>
+<path d="M 512 96 l 3 3 l 6 -6" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="550" y="92" font-size="15.5" fill="#1d4ed8" font-weight="700" text-anchor="start" letter-spacing="0">Review Officer</text>
+<text x="550" y="113" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Review · decide</text>
+<rect x="694" y="56" width="200" height="80" rx="12" fill="#faf5ff" stroke="#7c3aed" stroke-width="1.6"/>
+<rect x="708" y="74" width="44" height="44" rx="9" fill="#ffffff"/>
+<circle cx="730" cy="96" r="7" fill="none" stroke="#7c3aed" stroke-width="3.4"/>
+<line x1="738.5" y1="96.0" x2="742.0" y2="96.0" stroke="#7c3aed" stroke-width="3" stroke-linecap="round"/>
+<line x1="736.0" y1="102.0" x2="738.5" y2="104.5" stroke="#7c3aed" stroke-width="3" stroke-linecap="round"/>
+<line x1="730.0" y1="104.5" x2="730.0" y2="108.0" stroke="#7c3aed" stroke-width="3" stroke-linecap="round"/>
+<line x1="724.0" y1="102.0" x2="721.5" y2="104.5" stroke="#7c3aed" stroke-width="3" stroke-linecap="round"/>
+<line x1="721.5" y1="96.0" x2="718.0" y2="96.0" stroke="#7c3aed" stroke-width="3" stroke-linecap="round"/>
+<line x1="724.0" y1="90.0" x2="721.5" y2="87.5" stroke="#7c3aed" stroke-width="3" stroke-linecap="round"/>
+<line x1="730.0" y1="87.5" x2="730.0" y2="84.0" stroke="#7c3aed" stroke-width="3" stroke-linecap="round"/>
+<line x1="736.0" y1="90.0" x2="738.5" y2="87.5" stroke="#7c3aed" stroke-width="3" stroke-linecap="round"/>
+<text x="764" y="92" font-size="15.5" fill="#7c3aed" font-weight="700" text-anchor="start" letter-spacing="0">Administrator</text>
+<text x="764" y="113" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Monitor · configure</text>
+<rect x="40" y="170" width="860" height="650" rx="16" fill="#fbfdff" stroke="#2b5ea8" stroke-width="2"/>
+<rect x="1160" y="170" width="490" height="650" rx="16" fill="#f7fdfb" stroke="#0f766e" stroke-width="2"/>
+<rect x="64" y="156" width="232" height="30" rx="8" fill="#16305c"/>
+<text x="180.0" y="176" font-size="12.5" fill="#ffffff" font-weight="700" text-anchor="middle" letter-spacing=".5">GOVFLOW PLATFORM</text>
+<rect x="1184" y="156" width="316" height="30" rx="8" fill="#0f766e"/>
+<text x="1342.0" y="176" font-size="12.5" fill="#ffffff" font-weight="700" text-anchor="middle" letter-spacing=".5">DEPARTMENTAL SYSTEMS (SIMULATED)</text>
+<rect x="260" y="202" width="420" height="92" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="1.6"/>
+<rect x="276" y="224" width="46" height="46" rx="9" fill="#ffffff"/>
+<rect x="288" y="238" width="22" height="18" rx="3" fill="none" stroke="#2563eb" stroke-width="2.4"/>
+<line x1="288" y1="244" x2="310" y2="244" stroke="#2563eb" stroke-width="2.4"/>
+<circle cx="292" cy="241" r="1.2" fill="#2563eb"/>
+<circle cx="295.5" cy="241" r="1.2" fill="#2563eb"/>
+<circle cx="299" cy="241" r="1.2" fill="#2563eb"/>
+<text x="338" y="243" font-size="16" fill="#1e3a5f" font-weight="700" text-anchor="start" letter-spacing="0">Next.js User Interface</text>
+<text x="338" y="264" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Citizen · Officer · Admin consoles</text>
+<rect x="260" y="324" width="420" height="92" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="1.6"/>
+<rect x="276" y="346" width="46" height="46" rx="9" fill="#ffffff"/>
+<circle cx="299" cy="369" r="8" fill="none" stroke="#0d9488" stroke-width="3.4"/>
+<line x1="308.5" y1="369.0" x2="312.0" y2="369.0" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
+<line x1="305.7" y1="375.7" x2="308.2" y2="378.2" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
+<line x1="299.0" y1="378.5" x2="299.0" y2="382.0" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
+<line x1="292.3" y1="375.7" x2="289.8" y2="378.2" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
+<line x1="289.5" y1="369.0" x2="286.0" y2="369.0" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
+<line x1="292.3" y1="362.3" x2="289.8" y2="359.8" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
+<line x1="299.0" y1="359.5" x2="299.0" y2="356.0" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
+<line x1="305.7" y1="362.3" x2="308.2" y2="359.8" stroke="#0d9488" stroke-width="3" stroke-linecap="round"/>
+<text x="338" y="365" font-size="16" fill="#1e3a5f" font-weight="700" text-anchor="start" letter-spacing="0">Express API Gateway</text>
+<text x="338" y="386" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Auth · RBAC · consent · pre-fill</text>
+<rect x="260" y="446" width="420" height="92" rx="12" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.6"/>
+<rect x="276" y="468" width="46" height="46" rx="9" fill="#ffffff"/>
+<path d="M 299 492 l 11 5 l -11 5 l -11 -5 z" fill="#8b5cf6" opacity="1"/>
+<path d="M 299 486 l 11 5 l -11 5 l -11 -5 z" fill="#8b5cf6" opacity="0.72"/>
+<path d="M 299 480 l 11 5 l -11 5 l -11 -5 z" fill="#8b5cf6" opacity="0.45"/>
+<text x="338" y="487" font-size="16" fill="#1e3a5f" font-weight="700" text-anchor="start" letter-spacing="0">Redis Queue</text>
+<text x="338" y="508" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">BullMQ job queue</text>
+<rect x="260" y="568" width="420" height="92" rx="12" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.6"/>
+<rect x="276" y="590" width="46" height="46" rx="9" fill="#ffffff"/>
+<circle cx="299" cy="613" r="8" fill="none" stroke="#f59e0b" stroke-width="3.4"/>
+<line x1="308.5" y1="613.0" x2="312.0" y2="613.0" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+<line x1="305.7" y1="619.7" x2="308.2" y2="622.2" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+<line x1="299.0" y1="622.5" x2="299.0" y2="626.0" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+<line x1="292.3" y1="619.7" x2="289.8" y2="622.2" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+<line x1="289.5" y1="613.0" x2="286.0" y2="613.0" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+<line x1="292.3" y1="606.3" x2="289.8" y2="603.8" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+<line x1="299.0" y1="603.5" x2="299.0" y2="600.0" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+<line x1="305.7" y1="606.3" x2="308.2" y2="603.8" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+<text x="338" y="609" font-size="16" fill="#1e3a5f" font-weight="700" text-anchor="start" letter-spacing="0">BullMQ Worker</text>
+<text x="338" y="630" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Workflow orchestration · retries</text>
+<rect x="260" y="690" width="420" height="102" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="1.6"/>
+<rect x="276" y="712" width="46" height="46" rx="9" fill="#ffffff"/>
+<ellipse cx="299" cy="728" rx="11" ry="4" fill="#2563eb"/>
+<path d="M 288 728 v 13 a 11 4 0 0 0 22 0 v -13" fill="#2563eb"/>
+<ellipse cx="299" cy="741" rx="11" ry="4" fill="#2563eb" opacity=".55"/>
+<text x="338" y="726" font-size="16" fill="#1e3a5f" font-weight="700" text-anchor="start" letter-spacing="0">PostgreSQL</text>
+<text x="338" y="746" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Workflow · audit · common data model</text>
+<text x="338" y="764" font-size="11.5" fill="#047857" font-weight="600" text-anchor="start" letter-spacing="0">Identifier crosswalk · pre-fill snapshots · receipts</text>
+<rect x="1184" y="202" width="442" height="138" rx="12" fill="#ffffff" stroke="#b7dfd8" stroke-width="1.6"/>
+<rect x="1202" y="224" width="48" height="48" rx="9" fill="#f1f8f7"/>
+<rect x="1214" y="239" width="24" height="18" rx="3" fill="none" stroke="#0ea5e9" stroke-width="2.2"/>
+<circle cx="1221" cy="246" r="3.2" fill="#0ea5e9"/>
+<path d="M 1216 254 a 5 5 0 0 1 10 0" fill="#0ea5e9"/>
+<line x1="1228" y1="244" x2="1237" y2="244" stroke="#0ea5e9" stroke-width="1.8" stroke-linecap="round"/>
+<line x1="1228" y1="248" x2="1235" y2="248" stroke="#0ea5e9" stroke-width="1.8" stroke-linecap="round"/>
+<line x1="1228" y1="252" x2="1233" y2="252" stroke="#0ea5e9" stroke-width="1.8" stroke-linecap="round"/>
+<text x="1266" y="244" font-size="15.5" fill="#1e3a5f" font-weight="700" text-anchor="start" letter-spacing="0">Identity Registry</text>
+<text x="1266" y="264" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">REST · API-key header</text>
+<text x="1202" y="294" font-size="12" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Citizen identity records</text>
+<rect x="1202" y="304" width="97.39999999999999" height="23" rx="11.5" fill="#f1f5f9"/>
+<text x="1250.7" y="320" font-size="11" fill="#5b6b7f" font-weight="600" text-anchor="middle" letter-spacing="0">Read only</text>
+<rect x="1184" y="358" width="442" height="138" rx="12" fill="#ffffff" stroke="#b7dfd8" stroke-width="1.6"/>
+<rect x="1202" y="380" width="48" height="48" rx="9" fill="#f1f8f7"/>
+<text x="1226" y="412" font-size="24" fill="#0d9488" font-weight="600" text-anchor="middle">₹</text>
+<text x="1266" y="400" font-size="15.5" fill="#1e3a5f" font-weight="700" text-anchor="start" letter-spacing="0">Income Department</text>
+<text x="1266" y="420" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">REST · Bearer token</text>
+<text x="1202" y="450" font-size="12" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Income assessments</text>
+<rect x="1202" y="460" width="235.0" height="23" rx="11.5" fill="#ecfdf5"/>
+<text x="1319.5" y="476" font-size="11" fill="#047857" font-weight="600" text-anchor="middle" letter-spacing="0">Read + receives decisions</text>
+<rect x="1184" y="514" width="442" height="138" rx="12" fill="#ffffff" stroke="#b7dfd8" stroke-width="1.6"/>
+<rect x="1202" y="536" width="48" height="48" rx="9" fill="#f1f8f7"/>
+<path d="M 1226 552 l 14 6 l -14 6 l -14 -6 z" fill="#2563eb"/>
+<path d="M 1218 561 v 6 a 8 5 0 0 0 16 0 v -6" fill="none" stroke="#2563eb" stroke-width="2.2"/>
+<text x="1266" y="556" font-size="15.5" fill="#1e3a5f" font-weight="700" text-anchor="start" letter-spacing="0">Education Department</text>
+<text x="1266" y="576" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">REST · HTTP Basic auth</text>
+<text x="1202" y="606" font-size="12" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Enrolment records</text>
+<rect x="1202" y="616" width="235.0" height="23" rx="11.5" fill="#ecfdf5"/>
+<text x="1319.5" y="632" font-size="11" fill="#047857" font-weight="600" text-anchor="middle" letter-spacing="0">Read + receives decisions</text>
+<rect x="1184" y="670" width="442" height="138" rx="12" fill="#ffffff" stroke="#b7dfd8" stroke-width="1.6"/>
+<rect x="1202" y="692" width="48" height="48" rx="9" fill="#f1f8f7"/>
+<path d="M 1217 704 h 12 l 7 7 v 17 a 2 2 0 0 1 -2 2 h -17 a 2 2 0 0 1 -2 -2 v -22 a 2 2 0 0 1 2 -2 z" fill="none" stroke="#64748b" stroke-width="2.2"/>
+<path d="M 1229 704 v 7 h 7" fill="none" stroke="#64748b" stroke-width="2.2"/>
+<line x1="1221" y1="717" x2="1232" y2="717" stroke="#64748b" stroke-width="1.8" stroke-linecap="round"/>
+<line x1="1221" y1="722" x2="1232" y2="722" stroke="#64748b" stroke-width="1.8" stroke-linecap="round"/>
+<line x1="1221" y1="727" x2="1232" y2="727" stroke="#64748b" stroke-width="1.8" stroke-linecap="round"/>
+<text x="1266" y="712" font-size="15.5" fill="#1e3a5f" font-weight="700" text-anchor="start" letter-spacing="0">Legacy Beneficiary System</text>
+<text x="1266" y="732" font-size="11.5" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">CSV export · no API</text>
+<text x="1202" y="762" font-size="12" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">Beneficiary register</text>
+<rect x="1202" y="772" width="192.0" height="23" rx="11.5" fill="#f1f5f9"/>
+<text x="1298.0" y="788" font-size="11" fill="#5b6b7f" font-weight="600" text-anchor="middle" letter-spacing="0">Read only — no inbox</text>
+<path d="M 366 56 L 366 34 L 152 34 L 152 56" fill="none" stroke="#7c3aed" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowS)"/>
+<text x="259" y="26" font-size="11.5" fill="#7c3aed" font-weight="600" text-anchor="middle" letter-spacing="0">signs in — GovFlow never sees a password</text>
+<path d="M 152 136 L 152 146 L 26 146 L 26 370 L 256 370" fill="none" stroke="#7c3aed" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowS)"/>
+<text x="44" y="250" font-size="11.5" fill="#7c3aed" font-weight="700" text-anchor="start" letter-spacing="0">identity assertion:</text>
+<text x="44" y="265" font-size="11.5" fill="#7c3aed" font-weight="400" text-anchor="start" letter-spacing="0">who they are, and</text>
+<text x="44" y="280" font-size="11.5" fill="#7c3aed" font-weight="400" text-anchor="start" letter-spacing="0">their identifier at</text>
+<text x="44" y="295" font-size="11.5" fill="#7c3aed" font-weight="400" text-anchor="start" letter-spacing="0">each department</text>
+<path d="M 366 136 L 366 200" fill="none" stroke="#1e3a5f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M 580 136 L 580 200" fill="none" stroke="#1e3a5f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M 794 136 L 794 158 L 640 158 L 640 200" fill="none" stroke="#1e3a5f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M 470 294 L 470 322" fill="none" stroke="#1e3a5f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<text x="482" y="313" font-size="11" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">REST / JSON</text>
+<path d="M 470 416 L 470 444" fill="none" stroke="#1e3a5f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<text x="482" y="435" font-size="11" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">enqueue</text>
+<path d="M 470 538 L 470 566" fill="none" stroke="#1e3a5f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<text x="482" y="557" font-size="11" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">dequeue</text>
+<path d="M 470 660 L 470 688" fill="none" stroke="#1e3a5f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M 260 741 L 206 741 L 206 394 L 256 394" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M 680 348 L 740 348 L 740 256 L 1156 256" fill="none" stroke="#64748b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 6" marker-end="url(#arrowM)"/>
+<text x="752" y="244" font-size="11.5" fill="#64748b" font-weight="600" text-anchor="start" letter-spacing="0">health checks · failure simulation</text>
+<path d="M 680 388 L 804 388 L 804 306 L 1156 306" fill="none" stroke="#1e40af" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<text x="816" y="280" font-size="11.5" fill="#1e40af" font-weight="700" text-anchor="start" letter-spacing="0">PRE-FILL — synchronous read</text>
+<text x="816" y="295" font-size="11" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">not queued: the citizen is waiting</text>
+<path d="M 680 596 L 900 596 L 900 427 L 1180 427" fill="none" stroke="#047857" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowW)"/>
+<path d="M 900 583 L 1180 583" fill="none" stroke="#047857" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowW)"/>
+<text x="912" y="402" font-size="11.5" fill="#047857" font-weight="700" text-anchor="start" letter-spacing="0">DECISIONS WRITTEN BACK</text>
+<text x="912" y="417" font-size="11" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">their reference is authoritative</text>
+<path d="M 680 630 L 1156 630" fill="none" stroke="#1e40af" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<text x="692" y="652" font-size="11.5" fill="#1e40af" font-weight="700" text-anchor="start" letter-spacing="0">four connectors — verification reads</text>
+<text x="692" y="667" font-size="11" fill="#5b6b7f" font-weight="400" text-anchor="start" letter-spacing="0">REST × 3 + CSV → one common data model</text>
 </svg>
