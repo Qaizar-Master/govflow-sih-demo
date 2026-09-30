@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { api, setToken } from './api';
+import { api, getToken, setToken } from './api';
 import type { AuthUser, Role } from './types';
 
 interface SessionState {
@@ -43,6 +43,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = React.useState(true);
 
   const refresh = React.useCallback(async () => {
+    // No token means nobody is signed in. Asking the API to confirm that
+    // costs a round trip and a guaranteed 401 on every anonymous page load.
+    if (!getToken()) {
+      setState({ user: null, citizen: null, department: null });
+      setLoading(false);
+      return;
+    }
     try {
       const data = await api.get<SessionState>('/api/auth/me');
       setState(data);

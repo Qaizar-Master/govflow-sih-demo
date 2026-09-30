@@ -5,15 +5,27 @@ const API_BASE =
 
 const TOKEN_KEY = 'govflow.token';
 
+/**
+ * localStorage throws in a private window with site data blocked, and a
+ * thrown accessor here would break sign-in rather than merely degrade it.
+ */
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null;
-  return window.localStorage.getItem(TOKEN_KEY);
+  try {
+    return window.localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
 }
 
 export function setToken(token: string | null): void {
   if (typeof window === 'undefined') return;
-  if (token) window.localStorage.setItem(TOKEN_KEY, token);
-  else window.localStorage.removeItem(TOKEN_KEY);
+  try {
+    if (token) window.localStorage.setItem(TOKEN_KEY, token);
+    else window.localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    // Storage unavailable. The session lasts this page only.
+  }
 }
 
 /** Error carrying the API's own code so callers can branch without parsing text. */
@@ -69,8 +81,12 @@ async function request<T>(
       (response.status === 0
         ? 'The GovFlow API is unreachable.'
         : `Request failed with status ${response.status}`);
-    // A stale or revoked session should land the user back on the sign-in page.
-    if (response.status === 401 && typeof window !== 'undefined') {
+    // A stale or revoked session should land the user back on the sign-in
+    // page - but only if we actually presented one. An anonymous request is
+    // *expected* to 401, and clearing on those raced with sign-in: the auth
+    // provider probes /api/auth/me on mount, and its 401 arrived after the
+    // SSO callback had already stored the new token, wiping it.
+    if (response.status === 401 && token && typeof window !== 'undefined') {
       setToken(null);
     }
     throw new ApiClientError(response.status, code, message, body?.error?.details);
